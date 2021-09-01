@@ -1,0 +1,1067 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8085
+  description: Generated server url
+paths:
+  /whatsapp/opt-in:
+    post:
+      tags:
+      - gup-shup-opt-in
+      operationId: gupShupWhatsApp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GSWhatsAppMessage'
+        required: true
+      responses:
+        "200":
+          description: OK
+  /netcore/whatsApp:
+    post:
+      tags:
+      - netcore-whatsapp-converter
+      operationId: netcoreWhatsApp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetcoreMessageFormat'
+        required: true
+      responses:
+        "200":
+          description: OK
+  /gupshup/whatsApp:
+    post:
+      tags:
+      - gup-shup-whatsapp-converter
+      operationId: gupshupWhatsApp
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GSWhatsAppMessage'
+      responses:
+        "200":
+          description: OK
+  /diksha/web:
+    post:
+      tags:
+      - diksha-web-controller
+      operationId: dikshaWeb
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DikshaWebMessageFormat'
+        required: true
+      responses:
+        "200":
+          description: OK
+  /cdac/sms/single/:
+    post:
+      tags:
+      - cdac-converter
+      operationId: cdacSingle
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommonMessage'
+      responses:
+        "200":
+          description: OK
+  /cdac/sms/bulk/:
+    post:
+      tags:
+      - cdac-converter
+      operationId: cdacBulk
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommonMessage'
+      responses:
+        "200":
+          description: OK
+  /service/health/kafka:
+    get:
+      tags:
+      - service-status-controller
+      operationId: kafkaStatusCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+  /service/health/cassandra:
+    get:
+      tags:
+      - service-status-controller
+      operationId: cassandraStatusCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+  /service/health/campaign:
+    get:
+      tags:
+      - service-status-controller
+      operationId: campaignUrlStatusCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+  /internalBot/reject-leave:
+    get:
+      tags:
+      - internal-bot
+      operationId: rejectLeave
+      parameters:
+      - name: userEmail
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: workingDays
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/User'
+  /internalBot/delete-leave:
+    get:
+      tags:
+      - internal-bot
+      operationId: deleteLeave
+      parameters:
+      - name: userEmail
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: workingDays
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/User'
+  /internalBot/approve-leave:
+    get:
+      tags:
+      - internal-bot
+      operationId: approveLeave
+      parameters:
+      - name: userEmail
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: workingDays
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/User'
+  /health:
+    get:
+      tags:
+      - health-controller
+      operationId: statusCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JsonNode'
+  /campaign/status/cdac/bulk:
+    get:
+      tags:
+      - campaign
+      operationId: getCampaignStatus
+      parameters:
+      - name: campaignId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TrackDetails'
+  /campaign/start:
+    get:
+      tags:
+      - campaign
+      operationId: startCampaign
+      parameters:
+      - name: campaignId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /campaign/resume:
+    get:
+      tags:
+      - campaign
+      operationId: resumeCampaign
+      parameters:
+      - name: campaignId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /campaign/pause:
+    get:
+      tags:
+      - campaign
+      operationId: pauseCampaign
+      parameters:
+      - name: campaignId
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    GSWhatsAppMessage:
+      type: object
+      properties:
+        waNumber:
+          type: string
+        mobile:
+          type: string
+        replyId:
+          type: string
+        messageId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        name:
+          type: string
+        version:
+          type: integer
+          format: int32
+        type:
+          type: string
+        text:
+          type: string
+        image:
+          $ref: '#/components/schemas/WAInboundFile'
+        document:
+          $ref: '#/components/schemas/WAInboundFile'
+        voice:
+          $ref: '#/components/schemas/WAInboundFile'
+        audio:
+          $ref: '#/components/schemas/WAInboundFile'
+        video:
+          $ref: '#/components/schemas/WAInboundFile'
+        location:
+          type: string
+        response:
+          type: string
+        extra:
+          type: string
+        app:
+          type: string
+    WAInboundFile:
+      type: object
+      properties:
+        mime_type:
+          type: string
+        signature:
+          type: string
+        url:
+          type: string
+        caption:
+          type: string
+    MessageContext:
+      type: object
+      properties:
+        ncmessage_id:
+          type: string
+        message_id:
+          type: string
+    NetcoreInboundFile:
+      type: object
+      properties:
+        mime_type:
+          type: string
+        signature:
+          type: string
+        url:
+          type: string
+        caption:
+          type: string
+    NetcoreMessageFormat:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetcoreWhatsAppMessage'
+    NetcoreWhatsAppMessage:
+      type: object
+      properties:
+        waNumber:
+          type: string
+        mobile:
+          type: string
+        replyId:
+          type: string
+        messageId:
+          type: string
+        timestamp:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+          format: int32
+        type:
+          type: string
+        text:
+          $ref: '#/components/schemas/TextType'
+        eventType:
+          type: string
+        context:
+          $ref: '#/components/schemas/MessageContext'
+        statusRemark:
+          type: string
+        source:
+          type: string
+        image:
+          $ref: '#/components/schemas/NetcoreInboundFile'
+        document:
+          $ref: '#/components/schemas/NetcoreInboundFile'
+        voice:
+          $ref: '#/components/schemas/NetcoreInboundFile'
+        audio:
+          $ref: '#/components/schemas/NetcoreInboundFile'
+        video:
+          $ref: '#/components/schemas/NetcoreInboundFile'
+        location:
+          type: string
+        response:
+          type: string
+        extra:
+          type: string
+        app:
+          type: string
+    TextType:
+      type: object
+      properties:
+        text:
+          type: string
+    DikshaWebMessageFormat:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SunbirdWebMessage'
+    SunbirdWebMessage:
+      type: object
+      properties:
+        messageId:
+          type: string
+        text:
+          type: string
+        userId:
+          type: string
+        appId:
+          type: string
+        channel:
+          type: string
+        from:
+          type: string
+        context:
+          type: object
+          additionalProperties:
+            type: object
+    CommonMessage:
+      type: object
+    JsonNode:
+      type: object
+      properties:
+        number:
+          type: boolean
+        bigInteger:
+          type: boolean
+        valueNode:
+          type: boolean
+        containerNode:
+          type: boolean
+        missingNode:
+          type: boolean
+        object:
+          type: boolean
+        pojo:
+          type: boolean
+        integralNumber:
+          type: boolean
+        floatingPointNumber:
+          type: boolean
+        short:
+          type: boolean
+        int:
+          type: boolean
+        long:
+          type: boolean
+        double:
+          type: boolean
+        bigDecimal:
+          type: boolean
+        textual:
+          type: boolean
+        boolean:
+          type: boolean
+        binary:
+          type: boolean
+        float:
+          type: boolean
+        nodeType:
+          type: string
+          enum:
+          - ARRAY
+          - BINARY
+          - BOOLEAN
+          - MISSING
+          - "NULL"
+          - NUMBER
+          - OBJECT
+          - POJO
+          - STRING
+        array:
+          type: boolean
+        empty:
+          type: boolean
+        null:
+          type: boolean
+    GroupMember:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: object
+        groupId:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        insertInstant:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          format: uuid
+    LocalTime:
+      type: object
+      properties:
+        hour:
+          type: integer
+          format: int32
+        minute:
+          type: integer
+          format: int32
+        second:
+          type: integer
+          format: int32
+        nano:
+          type: integer
+          format: int32
+    User:
+      type: object
+      properties:
+        encryptionScheme:
+          type: string
+        factor:
+          type: integer
+          format: int32
+        id:
+          type: string
+          format: uuid
+        password:
+          type: string
+        passwordChangeRequired:
+          type: boolean
+        passwordLastUpdateInstant:
+          type: string
+          format: date-time
+        salt:
+          type: string
+        verified:
+          type: boolean
+        preferredLanguages:
+          type: array
+          items:
+            type: object
+            properties:
+              script:
+                type: string
+              country:
+                type: string
+              variant:
+                type: string
+              language:
+                type: string
+              unicodeLocaleAttributes:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              unicodeLocaleKeys:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              displayLanguage:
+                type: string
+              displayScript:
+                type: string
+              displayCountry:
+                type: string
+              displayVariant:
+                type: string
+              displayName:
+                type: string
+              extensionKeys:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              iso3Language:
+                type: string
+              iso3Country:
+                type: string
+        memberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+        registrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRegistration'
+        active:
+          type: boolean
+        birthDate:
+          type: string
+          format: date
+        cleanSpeakId:
+          type: string
+          format: uuid
+        data:
+          type: object
+          additionalProperties:
+            type: object
+        email:
+          type: string
+        expiry:
+          type: string
+          format: date-time
+        firstName:
+          type: string
+        fullName:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        insertInstant:
+          type: string
+          format: date-time
+        lastLoginInstant:
+          type: string
+          format: date-time
+        lastName:
+          type: string
+        middleName:
+          type: string
+        mobilePhone:
+          type: string
+        parentEmail:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        timezone:
+          type: object
+          properties:
+            id:
+              type: string
+            rules:
+              type: object
+              properties:
+                transitions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      offsetBefore:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetAfter:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      dateTimeBefore:
+                        type: string
+                        format: date-time
+                      duration:
+                        type: object
+                        properties:
+                          seconds:
+                            type: integer
+                            format: int64
+                          units:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                dateBased:
+                                  type: boolean
+                                timeBased:
+                                  type: boolean
+                                durationEstimated:
+                                  type: boolean
+                          negative:
+                            type: boolean
+                          zero:
+                            type: boolean
+                          nano:
+                            type: integer
+                            format: int32
+                      instant:
+                        type: string
+                        format: date-time
+                      gap:
+                        type: boolean
+                      overlap:
+                        type: boolean
+                      dateTimeAfter:
+                        type: string
+                        format: date-time
+                transitionRules:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      month:
+                        type: string
+                        enum:
+                        - JANUARY
+                        - FEBRUARY
+                        - MARCH
+                        - APRIL
+                        - MAY
+                        - JUNE
+                        - JULY
+                        - AUGUST
+                        - SEPTEMBER
+                        - OCTOBER
+                        - NOVEMBER
+                        - DECEMBER
+                      timeDefinition:
+                        type: string
+                        enum:
+                        - UTC
+                        - WALL
+                        - STANDARD
+                      standardOffset:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetBefore:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetAfter:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      dayOfMonthIndicator:
+                        type: integer
+                        format: int32
+                      localTime:
+                        $ref: '#/components/schemas/LocalTime'
+                      midnightEndOfDay:
+                        type: boolean
+                      dayOfWeek:
+                        type: string
+                        enum:
+                        - MONDAY
+                        - TUESDAY
+                        - WEDNESDAY
+                        - THURSDAY
+                        - FRIDAY
+                        - SATURDAY
+                        - SUNDAY
+                fixedOffset:
+                  type: boolean
+        twoFactorDelivery:
+          type: string
+          enum:
+          - None
+          - TextMessage
+        twoFactorEnabled:
+          type: boolean
+        twoFactorSecret:
+          type: string
+        username:
+          type: string
+        usernameStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - PENDING
+          - REJECTED
+    UserRegistration:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: object
+        preferredLanguages:
+          type: array
+          items:
+            type: object
+            properties:
+              script:
+                type: string
+              country:
+                type: string
+              variant:
+                type: string
+              language:
+                type: string
+              unicodeLocaleAttributes:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              unicodeLocaleKeys:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              displayLanguage:
+                type: string
+              displayScript:
+                type: string
+              displayCountry:
+                type: string
+              displayVariant:
+                type: string
+              displayName:
+                type: string
+              extensionKeys:
+                uniqueItems: true
+                type: array
+                items:
+                  type: string
+              iso3Language:
+                type: string
+              iso3Country:
+                type: string
+        tokens:
+          type: object
+          additionalProperties:
+            type: string
+        applicationId:
+          type: string
+          format: uuid
+        authenticationToken:
+          type: string
+        cleanSpeakId:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        insertInstant:
+          type: string
+          format: date-time
+        lastLoginInstant:
+          type: string
+          format: date-time
+        roles:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+        timezone:
+          type: object
+          properties:
+            id:
+              type: string
+            rules:
+              type: object
+              properties:
+                transitions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      offsetBefore:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetAfter:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      dateTimeBefore:
+                        type: string
+                        format: date-time
+                      duration:
+                        type: object
+                        properties:
+                          seconds:
+                            type: integer
+                            format: int64
+                          units:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                dateBased:
+                                  type: boolean
+                                timeBased:
+                                  type: boolean
+                                durationEstimated:
+                                  type: boolean
+                          negative:
+                            type: boolean
+                          zero:
+                            type: boolean
+                          nano:
+                            type: integer
+                            format: int32
+                      instant:
+                        type: string
+                        format: date-time
+                      gap:
+                        type: boolean
+                      overlap:
+                        type: boolean
+                      dateTimeAfter:
+                        type: string
+                        format: date-time
+                transitionRules:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      month:
+                        type: string
+                        enum:
+                        - JANUARY
+                        - FEBRUARY
+                        - MARCH
+                        - APRIL
+                        - MAY
+                        - JUNE
+                        - JULY
+                        - AUGUST
+                        - SEPTEMBER
+                        - OCTOBER
+                        - NOVEMBER
+                        - DECEMBER
+                      timeDefinition:
+                        type: string
+                        enum:
+                        - UTC
+                        - WALL
+                        - STANDARD
+                      standardOffset:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetBefore:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      offsetAfter:
+                        type: object
+                        properties:
+                          totalSeconds:
+                            type: integer
+                            format: int32
+                          id:
+                            type: string
+                      dayOfMonthIndicator:
+                        type: integer
+                        format: int32
+                      localTime:
+                        $ref: '#/components/schemas/LocalTime'
+                      midnightEndOfDay:
+                        type: boolean
+                      dayOfWeek:
+                        type: string
+                        enum:
+                        - MONDAY
+                        - TUESDAY
+                        - WEDNESDAY
+                        - THURSDAY
+                        - FRIDAY
+                        - SATURDAY
+                        - SUNDAY
+                fixedOffset:
+                  type: boolean
+        username:
+          type: string
+        usernameStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - PENDING
+          - REJECTED
+        verified:
+          type: boolean
+    DeliveryDetails:
+      type: object
+      properties:
+        phoneNumberStatus:
+          type: array
+          xml:
+            name: "no"
+          items:
+            $ref: '#/components/schemas/PhoneNumberStatus'
+    PhoneNumberStatus:
+      type: object
+      properties:
+        mobileNumber:
+          type: string
+          xml:
+            name: mobNo
+            attribute: true
+        status:
+          type: string
+    TrackDetails:
+      type: object
+      properties:
+        messageId:
+          type: string
+          xml:
+            name: msgid
+        deliveredSMSCount:
+          type: string
+          xml:
+            name: delvSMSCount
+        failedSMSCount:
+          type: string
+          xml:
+            name: fldSMSCount
+        submittedSMSCount:
+          type: string
+          xml:
+            name: subSMSCount
+        undelivered:
+          type: string
+          xml:
+            name: undelv
+        delivered:
+          $ref: '#/components/schemas/DeliveryDetails'
+        submitted:
+          $ref: '#/components/schemas/DeliveryDetails'
+        failed:
+          $ref: '#/components/schemas/DeliveryDetails'
+      xml:
+        name: dept
