@@ -10,6 +10,9 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.dao.service.HealthService;
 import com.uci.utils.kafka.KafkaConfig;
+import com.uci.utils.telemetry.LogTelemetryBuilder;
+import com.uci.utils.telemetry.LogTelemetryMessage;
+import com.uci.utils.telemetry.TelemetryLogger;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -18,6 +21,9 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.cassandra.CassandraHealthIndicator;
@@ -32,15 +38,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = "/service")
 public class ServiceStatusController {
-	@Autowired 
-	private HealthService healthService;
 
-    @RequestMapping(value = "/health", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> statusCheck() throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode json = mapper.readTree("{\"id\":\"api.content.service.health\",\"ver\":\"3.0\",\"ts\":null,\"params\":{\"resmsgid\":null,\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"healthy\":true}}");
-        return ResponseEntity.ok(json);
-    }
+	@Autowired
+	private HealthService healthService;
     
     @RequestMapping(value = "/health/cassandra", method = RequestMethod.GET, produces = { "application/json", "text/json" })
     public ResponseEntity<JsonNode> cassandraStatusCheck() throws IOException, JsonProcessingException {

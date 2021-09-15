@@ -8,6 +8,8 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import com.uci.utils.BotService;
+import com.uci.utils.CampaignService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -42,6 +44,9 @@ public class NetcoreWhatsappConverter {
 
     @Autowired
     public BotService botService;
+    
+    @Autowired
+    public CampaignService campaignService;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void netcoreWhatsApp(@RequestBody NetcoreMessageFormat message) throws JsonProcessingException, JAXBException {
@@ -60,6 +65,7 @@ public class NetcoreWhatsappConverter {
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
                 .botService(botService)
+                .campaignService(campaignService)
                 .build()
                 .process();
     }
