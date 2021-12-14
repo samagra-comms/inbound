@@ -8,6 +8,9 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.utils.kafka.SimpleProducer;
+
+import io.opentelemetry.api.trace.Tracer;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -44,6 +47,9 @@ public class GupShupWhatsappConverter {
 
     @Autowired
     public BotService botService;
+    
+    @Autowired
+    public Tracer tracer;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public void gupshupWhatsApp(@Valid GSWhatsAppMessage message) throws JsonProcessingException, JAXBException {
@@ -61,6 +67,7 @@ public class GupShupWhatsappConverter {
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
                 .botService(botService)
+                .tracer(tracer)
                 .build()
                 .process();
     }

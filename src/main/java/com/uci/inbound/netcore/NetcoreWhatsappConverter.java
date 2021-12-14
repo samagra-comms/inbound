@@ -6,6 +6,8 @@ import com.uci.adapter.netcore.whatsapp.NetcoreWhatsappAdapter;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.kafka.SimpleProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import com.uci.utils.BotService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,9 @@ public class NetcoreWhatsappConverter {
 
     @Autowired
     public BotService botService;
+    
+    @Autowired
+    public Tracer tracer;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void netcoreWhatsApp(@RequestBody NetcoreMessageFormat message) throws JsonProcessingException, JAXBException {
@@ -60,6 +65,7 @@ public class NetcoreWhatsappConverter {
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
                 .botService(botService)
+                .tracer(tracer)
                 .build()
                 .process();
     }
