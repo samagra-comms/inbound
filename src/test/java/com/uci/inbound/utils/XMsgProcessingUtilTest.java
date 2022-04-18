@@ -86,7 +86,7 @@ public class XMsgProcessingUtilTest {
 		
 		FusionAuthClient fusionAuthClient = new FusionAuthClient("c0VY85LRCYnsk64xrjdXNVFFJ3ziTJ91r08Cm0Pcjbc", "http://134.209.150.161:9011");
 		
-		BotService botService = new BotService(webClient, fusionAuthClient);
+		BotService botService = new BotService(webClient, fusionAuthClient, null);
 		
 		netcoreWhatsappAdapter = NetcoreWhatsappAdapter.builder()
                 .botservice(botService)
