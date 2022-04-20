@@ -4,6 +4,7 @@ import javax.validation.Valid;
 import javax.xml.bind.JAXBException;
 
 import com.uci.adapter.gs.whatsapp.GupShupWhatsappAdapter;
+import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.utils.azure.AzureBlobService;
@@ -57,6 +58,9 @@ public class GupShupWhatsappConverter {
     @Autowired
     public AzureBlobService azureBlobService;
 
+    @Autowired
+    public MediaSizeLimit mediaSizeLimit;
+
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public void gupshupWhatsApp(@Valid GSWhatsAppMessage message) throws JsonProcessingException, JAXBException {
     	log.info("message:" +message);
@@ -65,6 +69,7 @@ public class GupShupWhatsappConverter {
                 .botservice(botService)
                 .xmsgRepo(xmsgRepository)
                 .azureBlobService(azureBlobService)
+                .mediaSizeLimit(mediaSizeLimit)
                 .build();
 
         XMsgProcessingUtil.builder()
