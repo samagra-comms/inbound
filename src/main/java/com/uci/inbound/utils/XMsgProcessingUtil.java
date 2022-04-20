@@ -188,7 +188,7 @@ public class XMsgProcessingUtil {
                         public Mono<Pair<Boolean, Object>> apply(JsonNode botNode) {
                         	log.info("validateBot botNode:"+botNode);
                         	String appName1 = null;
-                        	if(botNode != null && !botNode.path("result").isEmpty()) {
+                        	if(botNode != null && botNode.path("result") != null && !botNode.path("result").isEmpty()) {
                         		String botValid= BotUtil.getBotValidFromJsonNode(botNode.path("result").path("data").get(0));
                             	if(!botValid.equals("true")) {
                             		return Mono.just(Pair.of(false, Pair.of(botNode.path("result").path("data").get(0), botValid)));
@@ -302,7 +302,7 @@ public class XMsgProcessingUtil {
                             public Mono<Pair<Boolean, Object>> apply(JsonNode botNode) {
                             	log.info("botNode:"+botNode);
                             	String appName1 = null;
-                            	if(botNode != null && !botNode.path("result").isEmpty()) {
+                            	if(botNode != null && botNode.path("result") != null && !botNode.path("result").isEmpty()) {
                             		String botValid= BotUtil.getBotValidFromJsonNode(botNode.path("result").path("data"));
                                 	if(!botValid.equals("true")) {
                                 		return Mono.just(Pair.of(false, Pair.of(botNode.path("result").path("data"), botValid)));
