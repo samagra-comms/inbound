@@ -70,6 +70,7 @@ public class GupShupWhatsappConverter {
                 .xmsgRepo(xmsgRepository)
                 .mediaSizeLimit(mediaSizeLimit)
                 .azureBlobService(azureBlobService)
+                .mediaSizeLimit(mediaSizeLimit)
                 .build();
 
         XMsgProcessingUtil.builder()
