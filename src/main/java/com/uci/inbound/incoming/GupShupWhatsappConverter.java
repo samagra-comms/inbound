@@ -4,12 +4,16 @@ import javax.validation.Valid;
 import javax.xml.bind.JAXBException;
 
 import com.uci.adapter.gs.whatsapp.GupShupWhatsappAdapter;
+import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
+import com.uci.utils.azure.AzureBlobService;
+import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.utils.kafka.SimpleProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -43,14 +47,29 @@ public class GupShupWhatsappConverter {
     public XMessageRepository xmsgRepository;
 
     @Autowired
-    public BotService botService;
+    public BotService botService; 
+    
+    @Autowired
+    public RedisCacheService redisCacheService;
+    
+    @Value("${outbound}")
+    public String outboundTopic;
+    
+    @Autowired
+    public AzureBlobService azureBlobService;
+
+    @Autowired
+    public MediaSizeLimit mediaSizeLimit;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public void gupshupWhatsApp(@Valid GSWhatsAppMessage message) throws JsonProcessingException, JAXBException {
-
+    	log.info("message:" +message);
+    	
         gupShupWhatsappAdapter = GupShupWhatsappAdapter.builder()
                 .botservice(botService)
                 .xmsgRepo(xmsgRepository)
+                .azureBlobService(azureBlobService)
+                .mediaSizeLimit(mediaSizeLimit)
                 .build();
 
         XMsgProcessingUtil.builder()
@@ -61,6 +80,8 @@ public class GupShupWhatsappConverter {
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
                 .botService(botService)
+                .redisCacheService(redisCacheService)
+                .topicOutbound(outboundTopic)
                 .build()
                 .process();
     }

@@ -1,9 +1,9 @@
-package com.uci.inbound.diksha.web;
-
+package com.uci.inbound.pwa.web;
+ 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.uci.adapter.sunbird.web.SunbirdWebPortalAdapter;
-import com.uci.adapter.sunbird.web.inbound.SunbirdWebMessage;
+import com.uci.adapter.pwa.PwaWebPortalAdapter;
+import com.uci.adapter.pwa.web.inbound.PwaWebMessage;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
@@ -23,8 +23,8 @@ import javax.xml.bind.JAXBException;
 
 @Slf4j
 @RestController
-@RequestMapping(value = "/diksha")
-public class DikshaWebController {
+@RequestMapping(value = "/pwa")
+public class PwaWebController {
 
     @Value("${inboundProcessed}")
     private String inboundProcessed;
@@ -34,7 +34,7 @@ public class DikshaWebController {
     @Value("${inbound-error}")
     private String inboundError;
 
-    private SunbirdWebPortalAdapter sunbirdWebPortalAdapter;
+    private PwaWebPortalAdapter pwaWebPortalAdapter;
 
     @Autowired
     public SimpleProducer kafkaProducer;
@@ -44,23 +44,23 @@ public class DikshaWebController {
 
     @Autowired
     public BotService botService;
-    
+
     @Autowired
     public RedisCacheService redisCacheService;
-    
+
     @Value("${outbound}")
     public String outboundTopic;
 
     @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public void dikshaWeb(@RequestBody SunbirdWebMessage message) throws JsonProcessingException, JAXBException {
+    public void dikshaWeb(@RequestBody PwaWebMessage message) throws JsonProcessingException, JAXBException {
 
         System.out.println(mapper.writeValueAsString(message));
 
-        sunbirdWebPortalAdapter = SunbirdWebPortalAdapter.builder()
+        pwaWebPortalAdapter = PwaWebPortalAdapter.builder()
                 .build();
 
         XMsgProcessingUtil.builder()
-                .adapter(sunbirdWebPortalAdapter)
+                .adapter(pwaWebPortalAdapter)
                 .xMsgRepo(xmsgRepo)
                 .inboundMessage(message)
                 .topicFailure(inboundError)

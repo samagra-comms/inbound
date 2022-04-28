@@ -1,0 +1,26 @@
+name: Docker Build on Push & Pull Request
+
+on: 
+  push:
+    branches: [test]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v1
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+      - name: Build the tagged Docker image
+        run: |
+          docker build . --file Dockerfile --build-arg username=${{ secrets.USERNAME }} --build-arg token=${{ secrets.TOKEN }} --tag inbound
+      - name: Launch container
+        run: docker run -dp 8000:8080 --env-file env.sample inbound
+        timeout-minutes: 5
+      - run: docker ps
+      - name: Wait for Service to start
+        run: while ! curl -s localhost:8000/health; do sleep 1; done
+        timeout-minutes: 1
+      - name: Check API health
+        run: curl -s localhost:8000/health

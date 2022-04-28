@@ -3,11 +3,15 @@ package com.uci.inbound.netcore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uci.adapter.netcore.whatsapp.inbound.NetcoreMessageFormat;
 import com.uci.adapter.netcore.whatsapp.NetcoreWhatsappAdapter;
+import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import com.uci.utils.BotService;
+import com.uci.utils.azure.AzureBlobService;
+import com.uci.utils.cache.service.RedisCacheService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -42,6 +46,18 @@ public class NetcoreWhatsappConverter {
 
     @Autowired
     public BotService botService;
+    
+    @Autowired
+    public RedisCacheService redisCacheService;
+    
+    @Value("${outbound}")
+    public String outboundTopic;
+    
+    @Autowired
+    public AzureBlobService azureBlobService;
+
+    @Autowired
+    public MediaSizeLimit mediaSizeLimit;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void netcoreWhatsApp(@RequestBody NetcoreMessageFormat message) throws JsonProcessingException, JAXBException {
@@ -50,6 +66,8 @@ public class NetcoreWhatsappConverter {
 
         netcoreWhatsappAdapter = NetcoreWhatsappAdapter.builder()
                 .botservice(botService)
+                .azureBlobService(azureBlobService)
+                .mediaSizeLimit(mediaSizeLimit)
                 .build();
 
         XMsgProcessingUtil.builder()
@@ -60,6 +78,8 @@ public class NetcoreWhatsappConverter {
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
                 .botService(botService)
+                .redisCacheService(redisCacheService)
+                .topicOutbound(outboundTopic)
                 .build()
                 .process();
     }
