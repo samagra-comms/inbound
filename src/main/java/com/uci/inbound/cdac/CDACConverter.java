@@ -5,6 +5,8 @@ import com.uci.adapter.cdac.CdacBulkSmsAdapter;
 import com.uci.adapter.Request.CommonMessage;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
+import com.uci.utils.BotService;
+import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,18 @@ public class CDACConverter {
     @Autowired
     public XMessageRepository xmsgRepo;
 
+    @Autowired
+    public BotService botService;
+
+    @Autowired
+    public RedisCacheService redisCacheService;
+
+    @Value("${outbound}")
+    public String outboundTopic;
+
+    @Value("${messageReport}")
+    public String topicReport;
+
     @RequestMapping(value = "/sms/bulk/", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public void cdacBulk(@Valid CommonMessage message) throws JsonProcessingException {
 
@@ -53,6 +67,10 @@ public class CDACConverter {
                 .topicFailure(inboundError)
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
+                .botService(botService)
+                .redisCacheService(redisCacheService)
+                .topicOutbound(outboundTopic)
+                .topicReport(topicReport)
                 .build().process();
     }
 
@@ -66,6 +84,10 @@ public class CDACConverter {
                 .topicFailure(inboundError)
                 .topicSuccess(inboundProcessed)
                 .kafkaProducer(kafkaProducer)
+                .botService(botService)
+                .redisCacheService(redisCacheService)
+                .topicOutbound(outboundTopic)
+                .topicReport(topicReport)
                 .build().process();
     }
 }

@@ -51,6 +51,9 @@ public class PwaWebController {
     @Value("${outbound}")
     public String outboundTopic;
 
+    @Value("${messageReport}")
+    public String topicReport;
+
     @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void dikshaWeb(@RequestBody PwaWebMessage message) throws JsonProcessingException, JAXBException {
 
@@ -69,6 +72,7 @@ public class PwaWebController {
                 .botService(botService)
                 .redisCacheService(redisCacheService)
                 .topicOutbound(outboundTopic)
+                .topicReport(topicReport)
                 .build()
                 .process();
     }

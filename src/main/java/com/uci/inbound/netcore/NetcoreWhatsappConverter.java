@@ -52,6 +52,9 @@ public class NetcoreWhatsappConverter {
     
     @Value("${outbound}")
     public String outboundTopic;
+
+    @Value("${messageReport}")
+    public String topicReport;
     
     @Autowired
     public AzureBlobService azureBlobService;
@@ -80,6 +83,7 @@ public class NetcoreWhatsappConverter {
                 .botService(botService)
                 .redisCacheService(redisCacheService)
                 .topicOutbound(outboundTopic)
+                .topicReport(topicReport)
                 .build()
                 .process();
     }

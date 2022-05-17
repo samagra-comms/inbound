@@ -48,6 +48,7 @@ public class XMsgProcessingUtil {
     String topicSuccess;
     String topicFailure;
     String topicOutbound;
+    String topicReport;
     BotService botService;
     RedisCacheService redisCacheService;
 
@@ -59,9 +60,6 @@ public class XMsgProcessingUtil {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
                     .subscribe(xmsg -> {
-//                        if(xmsg.getMessageState().equals("SENT") || xmsg.getMessageState().equals("DELIVERED")) {
-//
-//                        } else {
                             getAppName(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(resultPair -> {
                                         log.info("getAppName response:"+resultPair);
@@ -94,7 +92,6 @@ public class XMsgProcessingUtil {
                                             }
                                         }
                                     });
-//                        }
                     });
 
         } catch (JAXBException e) {
@@ -232,7 +229,13 @@ public class XMsgProcessingUtil {
         } catch (JAXBException e) {
             kafkaProducer.send(topicFailure, inboundMessage.toString());
         }
-        kafkaProducer.send(topicSuccess, xmessage);
+
+        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT) || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)) {
+            kafkaProducer.send(topicReport, xmessage);
+        } else {
+            kafkaProducer.send(topicSuccess, xmessage);
+        }
+
     }
     
     private void sendEventToOutboundKafka(XMessage xmsg) {
@@ -305,7 +308,8 @@ public class XMsgProcessingUtil {
                             public Mono<Pair<Boolean, Object>> apply(JsonNode botNode) {
                             	log.info("botNode:"+botNode);
                             	String appName1 = null;
-                            	if(botNode != null && !botNode.path("result").isEmpty()) {
+                            	if(botNode != null && !botNode.path("result").isEmpty()
+                                        && !botNode.path("result").path("data").isEmpty()) {
                             		String botValid= BotUtil.getBotValidFromJsonNode(botNode.path("result").path("data"));
                                 	if(!botValid.equals("true")) {
                                 		return Mono.just(Pair.of(false, Pair.of(botNode.path("result").path("data"), botValid)));
