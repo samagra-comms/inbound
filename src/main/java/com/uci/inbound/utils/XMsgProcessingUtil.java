@@ -230,7 +230,9 @@ public class XMsgProcessingUtil {
             kafkaProducer.send(topicFailure, inboundMessage.toString());
         }
 
-        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT) || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)) {
+        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT)
+                || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
+                || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
             kafkaProducer.send(topicReport, xmessage);
         } else {
             kafkaProducer.send(topicSuccess, xmessage);
