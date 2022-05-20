@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.xml.bind.JAXBException;
+import com.uci.utils.kafka.RecordProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 
 @Slf4j
 @RestController
@@ -37,7 +40,10 @@ public class PwaWebController {
     private PwaWebPortalAdapter pwaWebPortalAdapter;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+@Autowired
+public Tracer tracer;
 
     @Autowired
     public XMessageRepository xmsgRepo;

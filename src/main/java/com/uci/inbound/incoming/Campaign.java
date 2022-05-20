@@ -11,6 +11,7 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.dao.utils.XMessageDAOUtils;
 import com.uci.utils.CampaignService;
 import com.uci.utils.kafka.SimpleProducer;
+import io.opentelemetry.context.Context;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
 import org.apache.commons.lang3.tuple.Pair;
@@ -25,6 +26,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import com.uci.utils.kafka.RecordProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 
 @Slf4j
 @CrossOrigin
@@ -35,7 +39,10 @@ public class Campaign {
     private String campaign;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+@Autowired
+public Tracer tracer;
 
     @Autowired
     private ProviderFactory factoryProvider;
@@ -94,9 +101,9 @@ public class Campaign {
         try {
             xmessage = xmsg.toXML();
         } catch (JAXBException e) {
-            kafkaProducer.send(topicFailure, "Start request for bot.");
+            kafkaProducer.send(topicFailure, "Start request for bot.", Context.current());
         }
-        kafkaProducer.send(topicSuccess, xmessage);
+        kafkaProducer.send(topicSuccess, xmessage, Context.current());
     }
 
     private Consumer<Throwable> genericError(String s) {
@@ -107,13 +114,13 @@ public class Campaign {
 
     @RequestMapping(value = "/pause", method = RequestMethod.GET)
     public void pauseCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-        kafkaProducer.send(campaign, campaignId);
+        kafkaProducer.send(campaign, campaignId, Context.current());
         return;
     }
 
     @RequestMapping(value = "/resume", method = RequestMethod.GET)
     public void resumeCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-        kafkaProducer.send(campaign, campaignId);
+        kafkaProducer.send(campaign, campaignId, Context.current());
         return;
     }
 

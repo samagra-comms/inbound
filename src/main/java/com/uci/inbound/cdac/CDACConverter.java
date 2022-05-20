@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import com.uci.utils.kafka.RecordProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 
 @Slf4j
 @CrossOrigin
@@ -40,7 +43,10 @@ public class CDACConverter {
     private CdacBulkSmsAdapter cdacBulkSmsAdapter;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+@Autowired
+public Tracer tracer;
 
     @Autowired
     public XMessageRepository xmsgRepo;

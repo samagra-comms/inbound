@@ -13,7 +13,12 @@ import com.uci.dao.utils.XMessageDAOUtils;
 import com.uci.utils.BotService;
 import com.uci.utils.bot.util.BotUtil;
 import com.uci.utils.cache.service.RedisCacheService;
+import com.uci.utils.kafka.RecordProducer;
 import com.uci.utils.kafka.SimpleProducer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.SenderReceiverInfo;
@@ -43,7 +48,7 @@ public class XMsgProcessingUtil {
 
     AbstractProvider adapter;
     CommonMessage inboundMessage;
-    SimpleProducer kafkaProducer;
+    RecordProducer kafkaProducer;
     XMessageRepository xMsgRepo;
     String topicSuccess;
     String topicFailure;
@@ -51,6 +56,7 @@ public class XMsgProcessingUtil {
     String topicReport;
     BotService botService;
     RedisCacheService redisCacheService;
+    Tracer tracer;
 
     public void process() throws JsonProcessingException {
 
@@ -60,13 +66,15 @@ public class XMsgProcessingUtil {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
                     .subscribe(xmsg -> {
+                            Span childSpan1 = createChildSpan("getAppName");
                             getAppName(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(resultPair -> {
+                                        childSpan1.end();
                                         log.info("getAppName response:"+resultPair);
                                         /* If bot is invalid, send error message to outbound, else process message */
                                         if(!resultPair.getLeft()) {
                                             log.info("Bot is invalid");
-                                            processInvalidBotMessage(xmsg, (Pair<Object, String>) resultPair.getRight());
+                                            processInvalidBotMessage(xmsg, (Pair<Object, String>) resultPair.getRight(), Context.current());
                                         } else {
                                             Pair<Boolean, String> checkBotPair = (Pair<Boolean, String>) resultPair.getRight();
                                             /* If bot check required, validate bot, else process message */
@@ -78,17 +86,17 @@ public class XMsgProcessingUtil {
                                                             /* If bot is invalid, send error message to outbound, else process message */
                                                             if(!resPair.getLeft()) {
                                                                 log.info("Bot is invalid");
-                                                                processInvalidBotMessage(xmsg, (Pair<Object, String>) resPair.getRight());
+                                                                processInvalidBotMessage(xmsg, (Pair<Object, String>) resPair.getRight(), Context.current());
                                                             } else {
                                                                 log.info("Process bot message");
                                                                 String appName = resPair.getRight().toString();
-                                                                processBotMessage(xmsg, appName);
+                                                                processBotMessage(xmsg, appName, Context.current());
                                                             }
                                                         });
                                             } else {
                                                 log.info("Process bot message");
                                                 String appName = checkBotPair.getRight().toString();
-                                                processBotMessage(xmsg, appName);
+                                                processBotMessage(xmsg, appName, Context.current());
                                             }
                                         }
                                     });
@@ -105,7 +113,7 @@ public class XMsgProcessingUtil {
      * @param xmsg
      * @param botDataPair
      */
-    private void processInvalidBotMessage(XMessage xmsg, Pair<Object, String> botDataPair) {
+    private void processInvalidBotMessage(XMessage xmsg, Pair<Object, String> botDataPair, Context currentContext) {
     	ObjectNode botNode = (ObjectNode) botDataPair.getLeft();
     	String message = botDataPair.getRight().toString();
     	xmsg.setApp(botNode.path("name").asText());
@@ -130,7 +138,7 @@ public class XMsgProcessingUtil {
             	xmsg.setAdapterId(campaignId);
             	XMessagePayload payload = XMessagePayload.builder().text(message).build();
             	xmsg.setPayload(payload);
-            	sendEventToOutboundKafka(xmsg);
+            	sendEventToOutboundKafka(xmsg, currentContext);
             });
     }
     
@@ -139,7 +147,7 @@ public class XMsgProcessingUtil {
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName) {
+    private void processBotMessage(XMessage xmsg, String appName, Context currentContext) {
     	xmsg.setApp(appName);
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
@@ -158,7 +166,7 @@ public class XMsgProcessingUtil {
                                             xMsgRepo.insert(currentMessageToBeInserted)
                                                     .doOnError(genericError("Error in inserting current message"))
                                                     .subscribe(insertedMessage -> {
-                                                        sendEventToKafka(xmsg);
+                                                        sendEventToKafka(xmsg, currentContext);
                                                     });
                                         }
                                     });
@@ -168,7 +176,7 @@ public class XMsgProcessingUtil {
             xMsgRepo.insert(currentMessageToBeInserted)
                     .doOnError(genericError("Error in inserting current message"))
                     .subscribe(xMessageDAO -> {
-                        sendEventToKafka(xmsg);
+                        sendEventToKafka(xmsg, currentContext);
                     });
         }
     }
@@ -211,6 +219,37 @@ public class XMsgProcessingUtil {
     	}
     }
 
+    /**
+     * Create Child Span with current context & parent span
+     * @param spanName
+     * @param context
+     * @param parentSpan
+     * @return childSpan
+     */
+    private Span createChildSpan(String spanName, Context context, Span parentSpan) {
+        String prefix = "inboundSpan-";
+        return tracer.spanBuilder(prefix + spanName).setParent(context.with(parentSpan)).startSpan();
+    }
+
+    /**
+     * Create Child Span
+     * @param spanName
+     * @return childSpan
+     */
+    private Span createChildSpan(String spanName) {
+        String prefix = "inbound-";
+        return tracer.spanBuilder(prefix + spanName).startSpan();
+    }
+
+    private void propagateContext(Context currectContext, XMessage xmsg) {
+        log.info("current context: " + currectContext);
+//    	ContextPropagators propagators = GlobalOpenTelemetry.getPropagators();
+//        TextMapPropagator textMapPropagator = propagators.getTextMapPropagator();
+
+        Map<String, String> map = new HashMap();
+        map.put("from", "inbound");
+        GlobalOpenTelemetry.getPropagators().getTextMapPropagator().inject(currectContext, xmsg, null);
+    }
 
     private Consumer<Throwable> genericError(String s) {
         return c -> {
@@ -222,25 +261,25 @@ public class XMsgProcessingUtil {
         return !xmsg.getMessageState().equals(XMessage.MessageState.REPLIED);
     }
 
-    private void sendEventToKafka(XMessage xmsg) {
+    private void sendEventToKafka(XMessage xmsg, Context currentContext) {
         String xmessage = null;
         try {
             xmessage = xmsg.toXML();
         } catch (JAXBException e) {
-            kafkaProducer.send(topicFailure, inboundMessage.toString());
+            kafkaProducer.send(topicFailure, inboundMessage.toString(), currentContext);
         }
 
         if(xmsg.getMessageState().equals(XMessage.MessageState.SENT)
                 || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
                 || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
-            kafkaProducer.send(topicReport, xmessage);
+            kafkaProducer.send(topicReport, xmessage, currentContext);
         } else {
-            kafkaProducer.send(topicSuccess, xmessage);
+            kafkaProducer.send(topicSuccess, xmessage, currentContext);
         }
 
     }
     
-    private void sendEventToOutboundKafka(XMessage xmsg) {
+    private void sendEventToOutboundKafka(XMessage xmsg, Context currentContext) {
         String xmessage = null;
         try {
             xmessage = xmsg.toXML();
@@ -248,7 +287,7 @@ public class XMsgProcessingUtil {
         } catch (JAXBException e) {
 //            kafkaProducer.send(topicFailure, inboundMessage.toString());
         }
-        kafkaProducer.send(topicOutbound, xmessage);
+        kafkaProducer.send(topicOutbound, xmessage, currentContext);
     }
 
     private Mono<XMessageDAO> getLatestXMessage(String userID, XMessage.MessageState messageState) {

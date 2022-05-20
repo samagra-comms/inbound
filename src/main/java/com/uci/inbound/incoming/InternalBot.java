@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import com.uci.utils.kafka.RecordProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 
 @Slf4j
 @CrossOrigin
@@ -21,7 +24,10 @@ public class InternalBot {
     private String campaign;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+@Autowired
+public Tracer tracer;
 
     @Qualifier("rest")
     @Autowired

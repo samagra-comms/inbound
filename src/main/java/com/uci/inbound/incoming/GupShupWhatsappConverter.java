@@ -23,6 +23,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uci.adapter.gs.whatsapp.GSWhatsAppMessage;
 
 import lombok.extern.slf4j.Slf4j;
+import com.uci.utils.kafka.RecordProducer;
+
+import io.opentelemetry.api.trace.Tracer;
 
 @Slf4j
 @RestController
@@ -41,7 +44,10 @@ public class GupShupWhatsappConverter {
     private GupShupWhatsappAdapter gupShupWhatsappAdapter;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+    @Autowired
+    public Tracer tracer;
 
     @Autowired
     public XMessageRepository xmsgRepository;
@@ -86,6 +92,7 @@ public class GupShupWhatsappConverter {
                 .redisCacheService(redisCacheService)
                 .topicOutbound(outboundTopic)
                 .topicReport(topicReport)
+                .tracer(tracer)
                 .build()
                 .process();
     }
