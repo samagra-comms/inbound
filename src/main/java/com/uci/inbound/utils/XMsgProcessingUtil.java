@@ -60,23 +60,36 @@ public class XMsgProcessingUtil {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
                     .subscribe(xmsg -> {
+                        /* If Message State is send, deliverd, read, send the event to report topic
+                        * else process as replied message */
+                        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT)
+                                || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
+                                || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
+                            LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
+                            getLatestXMessage(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.SENT.name()).subscribe(xMessageLast -> {
+                                if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
+                                    xmsg.setApp(xMessageLast.getApp());
+                                    sendEventToKafka(xmsg);
+                                }
+                            });
+                        } else {
                             getAppName(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(resultPair -> {
-                                        log.info("getAppName response:"+resultPair);
+                                        log.info("getAppName response:" + resultPair);
                                         /* If bot is invalid, send error message to outbound, else process message */
-                                        if(!resultPair.getLeft()) {
+                                        if (!resultPair.getLeft()) {
                                             log.info("Bot is invalid");
                                             processInvalidBotMessage(xmsg, (Pair<Object, String>) resultPair.getRight());
                                         } else {
                                             Pair<Boolean, String> checkBotPair = (Pair<Boolean, String>) resultPair.getRight();
                                             /* If bot check required, validate bot, else process message */
-                                            if(checkBotPair.getLeft()) {
+                                            if (checkBotPair.getLeft()) {
                                                 log.info("Bot check required.");
                                                 validateBot(checkBotPair.getRight().toString())
                                                         .subscribe(resPair -> {
-                                                            log.info("ValidateBot response:"+resPair);
+                                                            log.info("ValidateBot response:" + resPair);
                                                             /* If bot is invalid, send error message to outbound, else process message */
-                                                            if(!resPair.getLeft()) {
+                                                            if (!resPair.getLeft()) {
                                                                 log.info("Bot is invalid");
                                                                 processInvalidBotMessage(xmsg, (Pair<Object, String>) resPair.getRight());
                                                             } else {
@@ -92,6 +105,7 @@ public class XMsgProcessingUtil {
                                             }
                                         }
                                     });
+                        }
                     });
 
         } catch (JAXBException e) {
