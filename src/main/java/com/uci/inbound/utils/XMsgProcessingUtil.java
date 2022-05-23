@@ -66,10 +66,14 @@ public class XMsgProcessingUtil {
                                 || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
                                 || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
                             LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
-                            getLatestXMessage(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.SENT.name()).subscribe(xMessageLast -> {
+                            getLatestXMessage(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.SENT.name())
+                                    .doOnError(genericError("Exception in finding latest xMessage for sent/delivered/read message")).subscribe(xMessageLast -> {
                                 if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
+                                    log.error("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
                                     xmsg.setApp(xMessageLast.getApp());
                                     sendEventToKafka(xmsg);
+                                } else {
+                                    log.error("App name not found for user id: "+xmsg.getFrom().getUserID()+" for sent/delivered/read message");
                                 }
                             });
                         } else {
