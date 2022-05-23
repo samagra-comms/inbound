@@ -66,10 +66,10 @@ public class XMsgProcessingUtil {
                                 || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
                                 || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
                             LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
-                            getLatestXMessage(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.SENT.name())
+                            getLatestXMessageForReport(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.SENT.name())
                                     .doOnError(genericError("Exception in finding latest xMessage for sent/delivered/read message")).subscribe(xMessageLast -> {
                                 if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
-                                    log.error("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
+                                    log.info("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
                                     xmsg.setApp(xMessageLast.getApp());
                                     sendEventToKafka(xmsg);
                                 } else {
@@ -405,20 +405,14 @@ public class XMsgProcessingUtil {
                         if (xMessageDAOS.size() > 0) {
                             List<XMessageDAO> filteredList = new ArrayList<>();
                             for (XMessageDAO xMessageDAO : xMessageDAOS) {
-                            	log.info("xMsgDao id: "+xMessageDAO.getId()+", dao app: "+xMessageDAO.getApp()
-                    			+", From id: "+xMessageDAO.getFromId()+", user id: "+xMessageDAO.getUserId()
-                    			+", xMessage: "+xMessageDAO.getXMessage()+", status: "+xMessageDAO.getMessageState()+
-                    			", timestamp: "+xMessageDAO.getTimestamp());
-                        
-                            	if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name()) 
-					|| xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
+                            	if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name())
+					                || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
                             		filteredList.add(xMessageDAO);
                             	}
                                     
                             }
                             if (filteredList.size() > 0) {
-                            	log.info("in - filtered list size > 0");
-                                filteredList.sort(new Comparator<XMessageDAO>() {
+                            	filteredList.sort(new Comparator<XMessageDAO>() {
                                     @Override
                                     public int compare(XMessageDAO o1, XMessageDAO o2) {
                                         return o1.getTimestamp().compareTo(o2.getTimestamp());
@@ -426,9 +420,37 @@ public class XMsgProcessingUtil {
                                 });
                             }
                             
-                            log.info("filteredList xMsgDao id: "+filteredList.get(0).getId());
-                            
-                            log.info("get 0: "+xMessageDAOS.get(0).getId());
+                            return xMessageDAOS.get(0);
+                        }
+                        return new XMessageDAO();
+                    }
+                });
+    }
+
+    private Mono<XMessageDAO> getLatestXMessageForReport(String userID, LocalDateTime yesterday, String messageState) {
+        return xMsgRepo.findAllByUserIdAndTimestampAfter(userID, yesterday)
+                .collectList()
+                .map(new Function<List<XMessageDAO>, XMessageDAO>() {
+                    @Override
+                    public XMessageDAO apply(List<XMessageDAO> xMessageDAOS) {
+                        if (xMessageDAOS.size() > 0) {
+                            List<XMessageDAO> filteredList = new ArrayList<>();
+                            for (XMessageDAO xMessageDAO : xMessageDAOS) {
+                                if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name())
+                                        || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
+                                    filteredList.add(xMessageDAO);
+                                }
+
+                            }
+                            if (filteredList.size() > 0) {
+                                filteredList.sort(new Comparator<XMessageDAO>() {
+                                    @Override
+                                    public int compare(XMessageDAO o1, XMessageDAO o2) {
+                                        return o1.getTimestamp().compareTo(o2.getTimestamp());
+                                    }
+                                });
+                            }
+
                             return xMessageDAOS.get(0);
                         }
                         return new XMessageDAO();
