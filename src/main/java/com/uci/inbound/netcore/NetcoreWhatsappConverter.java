@@ -72,19 +72,23 @@ public class NetcoreWhatsappConverter {
                 .azureBlobService(azureBlobService)
                 .mediaSizeLimit(mediaSizeLimit)
                 .build();
+        try {
+            XMsgProcessingUtil.builder()
+                    .adapter(netcoreWhatsappAdapter)
+                    .xMsgRepo(xmsgRepo)
+                    .inboundMessage(message.getMessages()[0])
+                    .topicFailure(inboundError)
+                    .topicSuccess(inboundProcessed)
+                    .kafkaProducer(kafkaProducer)
+                    .botService(botService)
+                    .redisCacheService(redisCacheService)
+                    .topicOutbound(outboundTopic)
+                    .topicReport(topicReport)
+                    .build()
+                    .process();
+        } catch(NullPointerException ex) {
+            log.error("An error occored : "+ex.getMessage());
+        }
 
-        XMsgProcessingUtil.builder()
-                .adapter(netcoreWhatsappAdapter)
-                .xMsgRepo(xmsgRepo)
-                .inboundMessage(message.getMessages()[0])
-                .topicFailure(inboundError)
-                .topicSuccess(inboundProcessed)
-                .kafkaProducer(kafkaProducer)
-                .botService(botService)
-                .redisCacheService(redisCacheService)
-                .topicOutbound(outboundTopic)
-                .topicReport(topicReport)
-                .build()
-                .process();
     }
 }
