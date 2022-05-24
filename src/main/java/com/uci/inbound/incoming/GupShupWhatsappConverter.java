@@ -10,11 +10,11 @@ import com.uci.utils.BotService;
 import com.uci.utils.azure.AzureBlobService;
 import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.inbound.utils.XMsgProcessingUtil;
+import com.uci.utils.cdn.FileCdnFactory;
 import com.uci.utils.cdn.samagra.MinioClientService;
 import com.uci.utils.kafka.SimpleProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -60,13 +60,10 @@ public class GupShupWhatsappConverter {
     public String topicReport;
 
     @Autowired
-    public AzureBlobService azureBlobService;
-
-    @Autowired
     public MediaSizeLimit mediaSizeLimit;
 
     @Autowired
-    public MinioClientService minioClientService;
+    public FileCdnFactory fileCdnFactory;
 
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public void gupshupWhatsApp(@Valid GSWhatsAppMessage message) throws JsonProcessingException, JAXBException {
@@ -75,8 +72,7 @@ public class GupShupWhatsappConverter {
         gupShupWhatsappAdapter = GupShupWhatsappAdapter.builder()
                 .botservice(botService)
                 .xmsgRepo(xmsgRepository)
-                .azureBlobService(azureBlobService)
-                .minioClientService(minioClientService)
+                .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
                 .mediaSizeLimit(mediaSizeLimit)
                 .build();
 
