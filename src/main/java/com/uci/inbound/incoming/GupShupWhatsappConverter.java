@@ -68,6 +68,7 @@ public class GupShupWhatsappConverter {
         gupShupWhatsappAdapter = GupShupWhatsappAdapter.builder()
                 .botservice(botService)
                 .xmsgRepo(xmsgRepository)
+                .mediaSizeLimit(mediaSizeLimit)
                 .azureBlobService(azureBlobService)
                 .mediaSizeLimit(mediaSizeLimit)
                 .build();
