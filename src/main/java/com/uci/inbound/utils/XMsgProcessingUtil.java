@@ -115,6 +115,8 @@ public class XMsgProcessingUtil {
         } catch (JAXBException e) {
         	log.info("Error Message: "+e.getMessage());
             e.printStackTrace();
+        } catch (NullPointerException e){
+            log.error("Error Message: "+e.getMessage());
         }
     }
     
@@ -304,7 +306,7 @@ public class XMsgProcessingUtil {
      */
     private Mono<Pair<Boolean, Object>> getAppName(String text, SenderReceiverInfo from) {
     	LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
-        if (text.equals("")) {
+        if (text != null && text.equals("")) {
             try {
             	return getLatestXMessage(from.getUserID(), yesterday, XMessage.MessageState.SENT.name()).map(new Function<XMessageDAO, Pair<Boolean, Object>>() {
                     @Override
