@@ -3,6 +3,7 @@ package com.uci.inbound.cdn;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.uci.utils.bot.util.FileUtil;
 import com.uci.utils.cdn.samagra.MinioClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,23 +33,29 @@ public class FileCdnController {
 //                String mimeType = URLConnection.guessContentTypeFromName(file.getOriginalFilename());
                 String mimeType = file.getContentType();
                 log.info("MimeType : " + mimeType);
-                String minioFileName = minioClientService.uploadFileFromInputStream(file.getInputStream(), mimeType, null);
-                if (minioFileName != null) {
-                    String signedUrl = minioClientService.getFileSignedUrl(minioFileName);
-                    if (signedUrl != null) {
-                        result = mapper.createObjectNode();
-                        result.put("url", signedUrl);
-                        result.put("mimeType", mimeType);
-                        result.put("fileName", minioFileName);
-                        return ResponseEntity.ok(result);
+                if(FileUtil.isValidFileType(mimeType)) {
+                    String minioFileName = minioClientService.uploadFileFromInputStream(file.getInputStream(), mimeType, null);
+                    if (minioFileName != null) {
+                        String signedUrl = minioClientService.getFileSignedUrl(minioFileName);
+                        if (signedUrl != null) {
+                            result = mapper.createObjectNode();
+                            result.put("url", signedUrl);
+                            result.put("mimeType", mimeType);
+                            result.put("fileName", minioFileName);
+                            return ResponseEntity.ok(result);
+                        } else {
+                            result = mapper.createObjectNode();
+                            result.put("message", "Signed url not found with this name :" + minioFileName);
+                            return ResponseEntity.badRequest().body(result);
+                        }
                     } else {
                         result = mapper.createObjectNode();
-                        result.put("message", "Signed url not found with this name :" + minioFileName);
+                        result.put("message", "File upload failed");
                         return ResponseEntity.badRequest().body(result);
                     }
                 } else {
                     result = mapper.createObjectNode();
-                    result.put("message", "File upload failed");
+                    result.put("message", "Invalid file type");
                     return ResponseEntity.badRequest().body(result);
                 }
             } else {

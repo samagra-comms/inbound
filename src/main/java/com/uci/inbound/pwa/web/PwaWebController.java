@@ -8,6 +8,7 @@ import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.utils.cache.service.RedisCacheService;
+import com.uci.utils.cdn.FileCdnFactory;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,12 +55,16 @@ public class PwaWebController {
     @Value("${messageReport}")
     public String topicReport;
 
+    @Autowired
+    public FileCdnFactory fileCdnFactory;
+
     @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void dikshaWeb(@RequestBody PwaWebMessage message) throws JsonProcessingException, JAXBException {
 
         System.out.println(mapper.writeValueAsString(message));
 
         pwaWebPortalAdapter = PwaWebPortalAdapter.builder()
+                .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
                 .build();
 
         XMsgProcessingUtil.builder()

@@ -6,6 +6,7 @@ import com.uci.adapter.netcore.whatsapp.NetcoreWhatsappAdapter;
 import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
+import com.uci.utils.cdn.FileCdnFactory;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import com.uci.utils.BotService;
@@ -55,9 +56,9 @@ public class NetcoreWhatsappConverter {
 
     @Value("${messageReport}")
     public String topicReport;
-    
+
     @Autowired
-    public AzureBlobService azureBlobService;
+    public FileCdnFactory fileCdnFactory;
 
     @Autowired
     public MediaSizeLimit mediaSizeLimit;
@@ -69,7 +70,7 @@ public class NetcoreWhatsappConverter {
 
         netcoreWhatsappAdapter = NetcoreWhatsappAdapter.builder()
                 .botservice(botService)
-                .azureBlobService(azureBlobService)
+                .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
                 .mediaSizeLimit(mediaSizeLimit)
                 .build();
         try {
