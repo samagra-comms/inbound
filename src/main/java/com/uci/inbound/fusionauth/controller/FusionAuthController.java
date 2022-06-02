@@ -186,7 +186,7 @@ public class FusionAuthController {
         }
     }
 
-    @RequestMapping(value = "/fetchFcmTokens", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = {"application/json", "text/json"})
+    @RequestMapping(value = "/fetchFcmTokens", method = RequestMethod.GET, produces = {"application/json", "text/json"})
     public ResponseEntity<Object> fetchFCMTokens(){
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode responseNode = mapper.createObjectNode();
@@ -212,8 +212,8 @@ public class FusionAuthController {
                                     && users.get(0) != null) {
                                 Map<String, String> userMap = (HashMap) users.get(0);
                                 if(userMap != null && userMap.get("mobilePhone") != null) {
-                                    token.put("token", device.get("id"));
-                                    token.put("mobilePhone", userMap.get("mobilePhone"));
+                                    token.put("fcmToken", device.get("id"));
+                                    token.put("phoneNo", userMap.get("mobilePhone"));
                                     token.put("name", userMap.get("username"));
                                     tokens.add(token);
                                 }
