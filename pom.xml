@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.uci</groupId>
 	<artifactId>inbound</artifactId>
-	<version>4.9.0</version>
+	<version>4.10.0</version>
 	<name>inbound</name>
 	<description>inbound</description>
 
@@ -85,12 +85,12 @@
 		<dependency>
 			<groupId>com.uci</groupId>
 			<artifactId>adapter</artifactId>
-			<version>4.9.0</version>
+			<version>4.10.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.uci</groupId>
 			<artifactId>utils</artifactId>
-			<version>4.9.0</version>
+			<version>4.10.0</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.xml.bind</groupId>
@@ -117,7 +117,7 @@
 		<dependency>
 			<groupId>com.uci</groupId>
 			<artifactId>dao</artifactId>
-			<version>4.9.0</version>
+			<version>4.10.0</version>
 		</dependency>
 		<!-- Minio CDN Dependencies - Start -->
 		<dependency>
