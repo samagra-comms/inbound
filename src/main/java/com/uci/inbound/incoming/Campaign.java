@@ -60,10 +60,15 @@ public class Campaign {
                 JsonNode data = node.get("data");
                 SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("7597185708").deviceType(DeviceType.PHONE).build();
                 SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
-                MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).build();
+                MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
                 XMessagePayload payload = new XMessagePayload().builder().text(data.path("startingMessage").asText()).build();
                 JsonNode adapter = data.findValues("logic").get(0).get(0).get("adapter");
                 log.info("adapter:"+adapter+", node:"+node);
+                if(adapter.path("provider").asText().equals("firebase")) {
+                    from.setDeviceType(DeviceType.PHONE_FCM);
+                } else if(adapter.path("provider").asText().equals("pwa")) {
+                    from.setDeviceType(DeviceType.PHONE_PWA);
+                }
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
                 XMessage xmsg = new XMessage().builder()
