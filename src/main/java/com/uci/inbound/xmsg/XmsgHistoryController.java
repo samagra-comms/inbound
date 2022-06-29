@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.CampaignService;
+import io.fusionauth.domain.HTTPHeaders;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.XMessage;
 import org.checkerframework.checker.index.qual.Positive;
@@ -13,10 +14,12 @@ import org.springframework.data.cassandra.core.query.CassandraPageRequest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -27,6 +30,11 @@ import java.util.function.Function;
 @RestController
 @RequestMapping("/xmsg")
 public class XmsgHistoryController {
+
+    private static final char[] HEX_CODE = "0123456789ABCDEF".toCharArray();
+
+    private static final String DEFAULT_CURSOR_MARK = "-1";
+
     @Autowired
     private XMessageRepository xMsgRepo;
 
@@ -34,26 +42,17 @@ public class XmsgHistoryController {
     private CampaignService campaignService;
 
     @RequestMapping(value = "/getBotHistory", method = RequestMethod.GET, produces = {"application/json", "text/json"})
-    public Mono<Flux<Object>> getBotHistory(@RequestParam(value = "botId", required = false) String botId,
+    public Mono<Object> getBotHistory(@RequestParam(value = "botId", required = false) String botId,
                                             @RequestParam(value = "userId", required = false) String userId,
-//                                                        @RequestParam("messageState") String messageState,
-                                            @RequestParam("startDate") String startDate, @RequestParam("endDate") String endDate,
-                                            @RequestParam(value = "pageNo", required = false, defaultValue = "0") @Positive int pageNo,
-                                            @RequestParam(value = "pageSize", required = false, defaultValue = "10") @Positive int pageSize,
+                                            @RequestParam("startDate") String startDate,
+                                            @RequestParam("endDate") String endDate,
                                             @RequestParam(value = "provider", defaultValue = "firebase") String provider) {
         try {
-            log.info("Called getBotHistory");
-//            List<String> messageStates = new ArrayList<>();
-//            messageStates.add(XMessage.MessageState.SENT.name());
-//            messageStates.add(XMessage.MessageState.DELIVERED.name());
-//            messageStates.add(XMessage.MessageState.READ.name());
-
+            XMessageHistoryResponse response = new XMessageHistoryResponse();
             if (botId == null && userId == null) {
-                return null;
-            }
-
-            if (startDate == null || endDate == null) {
-                return null;
+                response.setStatusCode(HttpStatus.BAD_REQUEST.value());
+                response.setErrorMsg("Bot id/user id required.");
+                return Mono.just(response);
             }
 
             Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 100000),
@@ -67,36 +66,52 @@ public class XmsgHistoryController {
             Timestamp endTimestamp = new Timestamp(endD.getTime());
 
             if (userId != null && !userId.isEmpty()) {
-//                return Mono.just(Flux.just(null));
-                return Mono.just(
-                        xMsgRepo.findAllByUserIdAndTimestampAfterAndTimestampBeforeAndProvider(paging, userId, startTimestamp, endTimestamp, provider.toLowerCase())
+                return xMsgRepo.findAllByUserIdAndTimestampAfterAndTimestampBeforeAndProvider(paging, userId, startTimestamp, endTimestamp, provider.toLowerCase())
                                 .map(new Function<Slice<XMessageDAO>, Object>() {
                                     @Override
                                     public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-//                                        xMessageDAOS.getPageable().get
-                                        return xMessageDAOS.getContent();
+                                        response.setStatusCode(HttpStatus.OK.value());
+                                        response.setRecords(xMessageDAOS.getContent());
+//                                        if(xMessageDAOS.isLast()) {
+//                                            response.setNextCursorMark(DEFAULT_CURSOR_MARK);
+//                                        } else {
+//                                            response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
+//                                            log.info("after cursor");
+//                                        }
+                                        return response;
                                     }
-                                })
-                );
+                                });
             } else if (botId != null && !botId.isEmpty()) {
                 return campaignService.getCampaignFromID(botId)
                         .doOnError(s -> log.info(s.getMessage()))
-                        .map(new Function<JsonNode, Flux<Object>>() {
+                        .map(new Function<JsonNode, Mono<Object>>() {
                             @Override
-                            public Flux<Object> apply(JsonNode jsonNode) {
+                            public Mono<Object> apply(JsonNode jsonNode) {
                                 JsonNode campaignDetails = jsonNode.get("data");
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
 
-//                                return Flux.just(null);
                                 return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                                return xMessageDAOS.getContent();
+                                                response.setStatusCode(HttpStatus.OK.value());
+                                                response.setRecords(xMessageDAOS.getContent());
+//                                                if(xMessageDAOS.isLast()) {
+//                                                    response.setNextCursorMark(DEFAULT_CURSOR_MARK);
+//                                                } else {
+//                                                    response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
+//                                                    log.info("after cursor");
+//                                                }
+                                                return response;
                                             }
                                         });
+                            }
+                        }).flatMap(new Function<Mono<Object>, Mono<? extends Object>>() {
+                            @Override
+                            public Mono<? extends Object> apply(Mono<Object> objectFlux) {
+                                return objectFlux;
                             }
                         });
 
@@ -105,6 +120,21 @@ public class XmsgHistoryController {
             ex.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Convert ByteBuffer data to Hex String
+     * @param buffer
+     * @return
+     */
+    public static String toHexString(ByteBuffer buffer) {
+        final StringBuilder r = new StringBuilder(buffer.remaining() * 2);
+        while (buffer.hasRemaining()) {
+            final byte b = buffer.get();
+            r.append(HEX_CODE[(b >> 4) & 0xF]);
+            r.append(HEX_CODE[(b & 0xF)]);
+        }
+        return r.toString();
     }
 
 }
