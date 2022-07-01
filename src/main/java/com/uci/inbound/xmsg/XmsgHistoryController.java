@@ -73,7 +73,7 @@ public class XmsgHistoryController {
             Timestamp endTimestamp = new Timestamp(endD.getTime());
 
             if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdAndTimestampAfterAndTimestampBeforeAndProvider(paging, userId, startTimestamp, endTimestamp, provider.toLowerCase())
+                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
                         .map(new Function<Slice<XMessageDAO>, Object>() {
                             @Override
                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
