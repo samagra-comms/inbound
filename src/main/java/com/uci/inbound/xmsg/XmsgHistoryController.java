@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 import java.util.function.Function;
 
 @Slf4j
@@ -41,12 +41,19 @@ public class XmsgHistoryController {
     @Autowired
     private CampaignService campaignService;
 
+    enum MessageState {
+        SENT,
+        DELIVERED,
+        READ;
+    }
+
     @RequestMapping(value = "/getBotHistory", method = RequestMethod.GET, produces = {"application/json", "text/json"})
     public Mono<Object> getBotHistory(@RequestParam(value = "botId", required = false) String botId,
-                                            @RequestParam(value = "userId", required = false) String userId,
-                                            @RequestParam("startDate") String startDate,
-                                            @RequestParam("endDate") String endDate,
-                                            @RequestParam(value = "provider", defaultValue = "firebase") String provider) {
+                                      @RequestParam(value = "userId", required = false) String userId,
+                                      @RequestParam("startDate") String startDate,
+                                      @RequestParam("endDate") String endDate,
+                                      @RequestParam(value = "provider", defaultValue = "firebase") String provider,
+                                      @RequestParam(value = "msgId", required = false) String msgId) {
         try {
             XMessageHistoryResponse response = new XMessageHistoryResponse();
             if (botId == null && userId == null) {
@@ -55,7 +62,7 @@ public class XmsgHistoryController {
                 return Mono.just(response);
             }
 
-            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 100000),
+            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 10000),
                     null
             );
 
@@ -66,21 +73,23 @@ public class XmsgHistoryController {
             Timestamp endTimestamp = new Timestamp(endD.getTime());
 
             if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdAndTimestampAfterAndTimestampBeforeAndProvider(paging, userId, startTimestamp, endTimestamp, provider.toLowerCase())
-                                .map(new Function<Slice<XMessageDAO>, Object>() {
-                                    @Override
-                                    public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                        response.setStatusCode(HttpStatus.OK.value());
-                                        response.setRecords(xMessageDAOS.getContent());
+                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
+                        .map(new Function<Slice<XMessageDAO>, Object>() {
+                            @Override
+                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
+                                response.setStatusCode(HttpStatus.OK.value());
+                                response.setRecords(xMessageDAOS.getContent());
 //                                        if(xMessageDAOS.isLast()) {
 //                                            response.setNextCursorMark(DEFAULT_CURSOR_MARK);
 //                                        } else {
 //                                            response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
 //                                            log.info("after cursor");
 //                                        }
-                                        return response;
-                                    }
-                                });
+                                List<XMessageDAO> xMessageDAOListNew = filterMessageState(xMessageDAOS);
+                                response.setRecords(xMessageDAOListNew);
+                                return response;
+                            }
+                        });
             } else if (botId != null && !botId.isEmpty()) {
                 return campaignService.getCampaignFromID(botId)
                         .doOnError(s -> log.info(s.getMessage()))
@@ -98,12 +107,15 @@ public class XmsgHistoryController {
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
                                                 response.setStatusCode(HttpStatus.OK.value());
                                                 response.setRecords(xMessageDAOS.getContent());
+
 //                                                if(xMessageDAOS.isLast()) {
 //                                                    response.setNextCursorMark(DEFAULT_CURSOR_MARK);
 //                                                } else {
 //                                                    response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
 //                                                    log.info("after cursor");
 //                                                }
+                                                List<XMessageDAO> xMessageDAOListNew = filterMessageState(xMessageDAOS);
+//                                                response.setRecords(xMessageDAOListNew);
                                                 return response;
                                             }
                                         });
@@ -124,6 +136,7 @@ public class XmsgHistoryController {
 
     /**
      * Convert ByteBuffer data to Hex String
+     *
      * @param buffer
      * @return
      */
@@ -135,6 +148,41 @@ public class XmsgHistoryController {
             r.append(HEX_CODE[(b & 0xF)]);
         }
         return r.toString();
+    }
+
+    public List<XMessageDAO> filterMessageState(Slice<XMessageDAO> xMessageDAOS) {
+        List<XMessageDAO> xMessageDAOList = xMessageDAOS.getContent();
+
+        Set<String> messageIdSet = new HashSet<>();
+        Map<String, XMessageDAO> sentMap = new HashMap<>();
+        Map<String, XMessageDAO> deliverdMap = new HashMap<>();
+        Map<String, XMessageDAO> readMap = new HashMap<>();
+
+        xMessageDAOList.forEach(xMessageDAO -> {
+            messageIdSet.add(xMessageDAO.getMessageId());
+            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.SENT.name())) {
+                sentMap.put(xMessageDAO.getMessageId(), xMessageDAO);
+            }
+            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.DELIVERED.name())) {
+                deliverdMap.put(xMessageDAO.getMessageId(), xMessageDAO);
+            }
+            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.READ.name())) {
+                readMap.put(xMessageDAO.getMessageId(), xMessageDAO);
+            }
+        });
+
+        List<XMessageDAO> xMessageDAOListNew = new ArrayList<>();
+        messageIdSet.forEach(messageId -> {
+            if (readMap != null && readMap.containsKey(messageId)) {
+                xMessageDAOListNew.add(readMap.get(messageId));
+            } else if (deliverdMap != null && deliverdMap.containsKey(messageId)) {
+                xMessageDAOListNew.add(deliverdMap.get(messageId));
+            } else if (sentMap != null && sentMap.containsKey(messageId)) {
+                xMessageDAOListNew.add(sentMap.get(messageId));
+            }
+        });
+
+        return xMessageDAOListNew;
     }
 
 }
