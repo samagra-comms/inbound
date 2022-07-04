@@ -56,40 +56,11 @@ public class XMsgProcessingUtil {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
                     .subscribe(xmsg -> {
-                        /* If Message State is sent, print error message
-                        * Else if deliverd, read, send the event to report topic
-                        * Else process as replied message */
-                        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT)){
-                            log.error("Error message: Sent message state already exists for message id.");
-                        } else if(xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
-                                    || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
-                            getSentXMessageForReport(xmsg.getMessageState(), xmsg.getMessageId().getChannelMessageId(), xmsg.getFrom().getUserID())
-                                    .doOnError(genericError("Exception in sent latest xMessage for received receipt request."))
-                                    .subscribe(dataMap -> {
-                                        if(dataMap.get("proceed") != null && dataMap.get("proceed").toString().equals("true")) {
-                                            XMessageDAO xMessageLast = (XMessageDAO) dataMap.get("xMessageDao");
-                                            if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
-                                                log.info("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
-                                                xmsg.setApp(xMessageLast.getApp());
-                                                xmsg.setSessionId(xMessageLast.getSessionId());
-                                                xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
-                                                xmsg.setOwnerId(xMessageLast.getOwnerId());
-                                                XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
-                                                xMsgRepo.insert(currentMessageToBeInserted)
-                                                        .doOnError(genericError("Error in inserting current message"))
-                                                        .subscribe(xMessageDAO -> {
-                                                            sendEventToKafka(xmsg);
-                                                        });
-                                            } else {
-                                                log.error("App name not found for user id: "+xmsg.getFrom().getUserID()+" for sent/delivered/read message");
-                                            }
-                                        } else {
-                                            if(dataMap.get("message") != null && !dataMap.get("message").toString().isEmpty()) {
-                                                log.error("Error message : "+dataMap.get("message").toString());
-                                            }
-                                        }
-                                    });
-                        } else {
+                        /* If Message State is replied, process as message sent
+                        * Else if message state is sent, print error message
+                        * Else if message state is deliverd/read, send the event to report topic
+                        * Else print invalid message error */
+                        if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
                             getAppName(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(result -> {
                                         log.info("getAppName response:" + result);
@@ -121,6 +92,36 @@ public class XMsgProcessingUtil {
                                             }
                                         }
                                     });
+                        } else if(xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
+                                || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
+                            getSentXMessageForReport(xmsg.getMessageState(), xmsg.getMessageId().getChannelMessageId(), xmsg.getFrom().getUserID())
+                                    .doOnError(genericError("Exception in sent latest xMessage for received receipt request."))
+                                    .subscribe(dataMap -> {
+                                        if(dataMap.get("proceed") != null && dataMap.get("proceed").toString().equals("true")) {
+                                            XMessageDAO xMessageLast = (XMessageDAO) dataMap.get("xMessageDao");
+                                            if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
+                                                log.info("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
+                                                xmsg.setApp(xMessageLast.getApp());
+                                                xmsg.setSessionId(xMessageLast.getSessionId());
+                                                xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
+                                                xmsg.setOwnerId(xMessageLast.getOwnerId());
+                                                XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
+                                                xMsgRepo.insert(currentMessageToBeInserted)
+                                                        .doOnError(genericError("Error in inserting current message"))
+                                                        .subscribe(xMessageDAO -> {
+                                                            sendEventToKafka(xmsg);
+                                                        });
+                                            } else {
+                                                log.error("App name not found for user id: "+xmsg.getFrom().getUserID()+" for sent/delivered/read message");
+                                            }
+                                        } else {
+                                            if(dataMap.get("message") != null && !dataMap.get("message").toString().isEmpty()) {
+                                                log.error("Error message : "+dataMap.get("message").toString());
+                                            }
+                                        }
+                                    });
+                        } else {
+                            log.error("Error message: Invalid message");
                         }
                     });
 
@@ -278,12 +279,10 @@ public class XMsgProcessingUtil {
             kafkaProducer.send(topicFailure, inboundMessage.toString());
         }
 
-        if(xmsg.getMessageState().equals(XMessage.MessageState.SENT)
-                || xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
-                || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
-            kafkaProducer.send(topicReport, xmessage);
-        } else {
+        if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
             kafkaProducer.send(topicSuccess, xmessage);
+        } else {
+            kafkaProducer.send(topicReport, xmessage);
         }
 
     }
@@ -475,9 +474,7 @@ public class XMsgProcessingUtil {
                         if (xMessageDAOS.size() > 0) {
                             xMessageDAOS.forEach(dao -> {
                                 log.info("dao: "+dao.getId());
-                                if((messageState.equals(XMessage.MessageState.DELIVERED)
-                                        || messageState.equals(XMessage.MessageState.READ))
-                                        && dao.getMessageState().equals(messageState)) {
+                                if(dao.getMessageState().equals(messageState)) {
                                     dataMap.put("proceed", "false");
                                     dataMap.put("message", "Receipt for messageState already exists.");
                                     return;
