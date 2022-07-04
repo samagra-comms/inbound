@@ -67,6 +67,9 @@ public class XMsgProcessingUtil {
                                 if(xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
                                     log.info("App name found: "+xMessageLast.getApp()+" for user id: "+xmsg.getFrom().getUserID());
                                     xmsg.setApp(xMessageLast.getApp());
+                                    xmsg.setSessionId(xMessageLast.getSessionId());
+                                    xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
+                                    xmsg.setOwnerId(xMessageLast.getOwnerId());
                                     XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
                                     xMsgRepo.insert(currentMessageToBeInserted)
                                             .doOnError(genericError("Error in inserting current message"))

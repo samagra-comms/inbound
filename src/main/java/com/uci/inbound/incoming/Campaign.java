@@ -69,10 +69,16 @@ public class Campaign {
                 } else if(adapter.path("provider").asText().equals("pwa")) {
                     from.setDeviceType(DeviceType.PHONE_PWA);
                 }
+                String ownerOrgId = data.path("ownerOrgID") != null && !data.path("ownerOrgID").asText().equals("null") ? data.path("ownerOrgID").asText() : null;
+                UUID ownerId = data.path("ownerID") != null && !data.path("ownerID").asText().equals("null") ? UUID.fromString(data.path("ownerID").asText()) : null;
+
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
                 XMessage xmsg = new XMessage().builder()
                         .app(data.path("name").asText())
+                        .sessionId(newConversationSessionId())
+                        .ownerId(ownerId)
+                        .ownerOrgId(ownerOrgId)
                         .from(from)
                         .to(to)
                         .messageId(msgId)
@@ -92,6 +98,14 @@ public class Campaign {
                         });
             }
         );
+    }
+
+    /**
+     * New Conversation Session UUID
+     * @return
+     */
+    private UUID newConversationSessionId() {
+        return UUID.randomUUID();
     }
 
     private void sendEventToKafka(XMessage xmsg) {
