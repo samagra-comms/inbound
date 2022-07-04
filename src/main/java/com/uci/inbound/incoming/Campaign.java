@@ -70,7 +70,7 @@ public class Campaign {
                     from.setDeviceType(DeviceType.PHONE_PWA);
                 }
                 String ownerOrgId = data.path("ownerOrgID") != null && !data.path("ownerOrgID").asText().equals("null") ? data.path("ownerOrgID").asText() : null;
-                UUID ownerId = data.path("ownerID") != null && !data.path("ownerID").asText().equals("null") ? UUID.fromString(data.path("ownerID").asText()) : null;
+                String ownerId = data.path("ownerID") != null && !data.path("ownerID").asText().equals("null") ? data.path("ownerID").asText() : null;
 
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 

@@ -170,7 +170,7 @@ public class XMsgProcessingUtil {
             xmsg.setOwnerOrgId(ownerOrgId.toString());
         }
         if(ownerId != null && !ownerId.toString().isEmpty()) {
-            xmsg.setOwnerId(UUID.fromString(ownerId.toString()));
+            xmsg.setOwnerId(ownerId.toString());
         }
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
@@ -500,8 +500,8 @@ public class XMsgProcessingUtil {
         dataMap.put("botCheckRequired", botCheckRequired);
         dataMap.put("appName", getXMessageAppName(xMessageLast));
         dataMap.put("sessionId", getXMessageSessionId(xMessageLast));
-        dataMap.put("ownerOrgId", getXMessageOwnerOrgId(xMessageLast).toString());
-        dataMap.put("ownerId", getXMessageOwnerId(xMessageLast).toString());
+        dataMap.put("ownerOrgId", getXMessageOwnerOrgId(xMessageLast));
+        dataMap.put("ownerId", getXMessageOwnerId(xMessageLast));
 
         return dataMap;
     }
@@ -548,7 +548,7 @@ public class XMsgProcessingUtil {
      * @return
      */
     private String getXMessageOwnerId(XMessageDAO xMessageDAO) {
-        return xMessageDAO.getOwnerId() != null ? xMessageDAO.getOwnerId().toString() : "";
+        return xMessageDAO.getOwnerId() != null ? xMessageDAO.getOwnerId() : "";
     }
 
     /**
@@ -557,7 +557,7 @@ public class XMsgProcessingUtil {
      * @return
      */
     private String getXMessageOwnerOrgId(XMessageDAO xMessageDAO) {
-        return xMessageDAO.getOwnerOrgId() != null ? xMessageDAO.getOwnerOrgId().toString() : "";
+        return xMessageDAO.getOwnerOrgId() != null ? xMessageDAO.getOwnerOrgId() : "";
     }
 
     /**
