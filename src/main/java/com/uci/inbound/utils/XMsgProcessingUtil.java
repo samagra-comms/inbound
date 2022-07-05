@@ -359,21 +359,19 @@ public class XMsgProcessingUtil {
                             	String appName1 = null;
                                 String ownerId = null;
                                 String ownerOrgId = null;
-                            	if(botNode != null && !botNode.path("result").isEmpty()
-                                        && !botNode.path("result").path("data").isEmpty()) {
-                            		String botValid= BotUtil.getBotValidFromJsonNode(botNode.path("result").path("data"));
-                                	ObjectNode botDataNode = (ObjectNode) botNode.path("result").path("data");
+                            	if(botNode != null && !botNode.isEmpty()) {
+                            		String botValid= BotUtil.getBotValidFromJsonNode(botNode);
                                     if(!botValid.equals("true")) {
                                         Map<String, Object> dataMap = new HashMap<>();
                                         dataMap.put("botExists", "false");
-                                        dataMap.put("botNode", botDataNode);
+                                        dataMap.put("botNode", botNode);
                                         dataMap.put("errorMsg", botValid);
                                         return Mono.just(dataMap);
     								}
-                                	JsonNode name = botDataNode.path("name");
+                                	JsonNode name = botNode.path("name");
     								appName1 = name.asText();
-                                    ownerOrgId = botDataNode.path("ownerOrgID") != null && !botDataNode.path("ownerOrgID").asText().equals("null") ? botDataNode.path("ownerOrgID").asText() : null;
-                                    ownerId = botDataNode.path("ownerID") != null && !botDataNode.path("ownerID").asText().equals("null") ? botDataNode.path("ownerID").asText() : null;
+                                    ownerOrgId = botNode.path("ownerOrgID") != null && !botNode.path("ownerOrgID").asText().equals("null") ? botNode.path("ownerOrgID").asText() : null;
+                                    ownerId = botNode.path("ownerID") != null && !botNode.path("ownerID").asText().equals("null") ? botNode.path("ownerID").asText() : null;
                             	} else {
                             		appName1 = null;
                             	}
