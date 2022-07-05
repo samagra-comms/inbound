@@ -474,7 +474,7 @@ public class XMsgProcessingUtil {
                         if (xMessageDAOS.size() > 0) {
                             xMessageDAOS.forEach(dao -> {
                                 log.info("dao: "+dao.getId());
-                                if(dao.getMessageState().equals(messageState)) {
+                                if(dao.getMessageState().equals(messageState.name())) {
                                     dataMap.put("proceed", "false");
                                     dataMap.put("message", "Receipt for messageState already exists.");
                                     return;
@@ -485,12 +485,12 @@ public class XMsgProcessingUtil {
                             });
                         }
 
-                        if(filteredList.size() > 0) {
-                            dataMap.put("proceed", "true");
-                            dataMap.put("xMessageDao", filteredList.get(0));
-                        } else if(dataMap.get("proceed") != null &&
+                        if(dataMap.get("proceed") != null &&
                                 dataMap.get("proceed").toString().equals("false")) {
                             // use data map generated in the for loop
+                        } else if(filteredList.size() > 0) {
+                            dataMap.put("proceed", "true");
+                            dataMap.put("xMessageDao", filteredList.get(0));
                         } else {
                             dataMap.put("proceed", "false");
                             dataMap.put("message", "Sent Message for message id does not exists.");
