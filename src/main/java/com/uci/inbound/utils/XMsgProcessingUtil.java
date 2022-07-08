@@ -55,7 +55,7 @@ public class XMsgProcessingUtil {
     public void process() throws JsonProcessingException {
 
         log.info("incoming message {}", new ObjectMapper().writeValueAsString(inboundMessage));
-        
+
         try {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
@@ -65,22 +65,22 @@ public class XMsgProcessingUtil {
                         * Else if message state is deliverd/read, send the event to report topic
                         * Else print invalid message error */
                         if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
-                            getAppName(xmsg.getPayload().getText(), xmsg.getFrom())
+                            fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(result -> {
-                                        log.info("getAppName response:" + result);
+                                        log.info("fetchBotData response:" + result);
                                         /** If bot exists & bot name exists, proceed
                                         * Else print error message
                                         */
-                                        if (result.get("botExists").toString().equals("true")
-                                                && result.get("appName") != null) {
+                                        if (result.get("botExists").toString().equals("true")) {
                                             /** If bot is valid, process message
                                              * Else proceed for invalid bot
                                              */
-                                            if (result.get("isBotValid").toString().equals("true")){
+                                            if (result.get("isBotValid").toString().equals("true")
+                                                    && result.get("appName") != null){
                                                 log.info("Process bot message");
                                                 processBotMessage(xmsg, result.get("appName").toString(),
-                                                        result.get("sessionId").toString(), result.get("ownerOrgId").toString(),
-                                                        result.get("ownerId").toString(), result.get("adapterId").toString());
+                                                        result.get("sessionId"), result.get("ownerOrgId"),
+                                                        result.get("ownerId"), result.get("adapterId"));
                                             } else {
                                                 /* Bot is not valid */
                                                 /**
@@ -88,7 +88,8 @@ public class XMsgProcessingUtil {
                                                  * Else if bot check not required errorMsg & BotNode exists, process invalid bot message
                                                  * Else print error message
                                                  */
-                                                if(result.get("checkIsBotValid").toString().equals("true")) {
+                                                if(result.get("checkIsBotValid").toString().equals("true")
+                                                        && result.get("appName") != null) {
                                                     log.info("Validate Bot");
                                                     validateBot(result.get("appName").toString(), result.get("sessionId").toString())
                                                             .subscribe(res -> {
@@ -98,8 +99,8 @@ public class XMsgProcessingUtil {
                                                                     if (res.get("isBotValid").toString().equals("true")) {
                                                                         log.info("Process bot message after validation.");
                                                                         processBotMessage(xmsg, res.get("appName").toString(),
-                                                                                res.get("sessionId").toString(), res.get("ownerOrgId").toString(),
-                                                                                res.get("ownerId").toString(), res.get("adapterId").toString());
+                                                                                res.get("sessionId"), res.get("ownerOrgId"),
+                                                                                res.get("ownerId"), res.get("adapterId"));
                                                                     } else {
                                                                         log.info("Bot is invalid after validation");
                                                                         processInvalidBotMessage(xmsg, (ObjectNode) res.get("botNode"), res.get("errorMsg").toString());
@@ -161,7 +162,7 @@ public class XMsgProcessingUtil {
             log.error("Error Message: "+e.getMessage());
         }
     }
-    
+
     /**
      * Process Bot Invalid Message - Send bot invalid message to outbound to process
      * @param xmsg
@@ -175,7 +176,7 @@ public class XMsgProcessingUtil {
         }
 
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
-    	
+
     	xMsgRepo.insert(currentMessageToBeInserted)
             .doOnError(genericError("Error in inserting current message"))
             .subscribe(xMessageDAO -> {
@@ -191,25 +192,25 @@ public class XMsgProcessingUtil {
             	sendEventToOutboundKafka(xmsg);
             });
     }
-    
+
     /**
      * Process Bot Message - send message to orchestrator for processing
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName, String sessionId, String ownerOrgId, String ownerId, String adapterId) {
+    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId) {
     	xmsg.setApp(appName);
-        if(sessionId != null && !sessionId.isEmpty()) {
-            xmsg.setSessionId(UUID.fromString(sessionId));
+        if(sessionId != null && !sessionId.toString().isEmpty()) {
+            xmsg.setSessionId(UUID.fromString(sessionId.toString()));
         }
-        if(ownerOrgId != null && !ownerOrgId.isEmpty()) {
-            xmsg.setOwnerOrgId(ownerOrgId);
+        if(ownerOrgId != null && !ownerOrgId.toString().isEmpty()) {
+            xmsg.setOwnerOrgId(ownerOrgId.toString());
         }
-        if(ownerId != null && !ownerId.isEmpty()) {
-            xmsg.setOwnerId(ownerId);
+        if(ownerId != null && !ownerId.toString().isEmpty()) {
+            xmsg.setOwnerId(ownerId.toString());
         }
-        if(adapterId != null && !adapterId.isEmpty()) {
-            xmsg.setAdapterId(adapterId);
+        if(adapterId != null && !adapterId.toString().isEmpty()) {
+            xmsg.setAdapterId(adapterId.toString());
         }
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
@@ -244,9 +245,7 @@ public class XMsgProcessingUtil {
     }
 
     /**
-     * Validate Bot & return app name as pair of 
-     	* Pair<is bot valid: true, Bot Name>
-     	* Pair<is bot valid: false, Pair<Bot Json, Bot Invalid Error Message>>
+     * Validate Bot & return appname & other bot data if validated, else return error message
      * @param botName
      * @return
      */
@@ -316,7 +315,7 @@ public class XMsgProcessingUtil {
         }
 
     }
-    
+
     private void sendEventToOutboundKafka(XMessage xmsg) {
         String xmessage = null;
         try {
@@ -341,7 +340,7 @@ public class XMsgProcessingUtil {
                         	if (xMessageDAO.getMessageState().equals(messageState.name())) {
                             	filteredList.add(xMessageDAO);
                             }
-                                
+
                         }
                         if (filteredList.size() > 0) {
                             filteredList.sort(Comparator.comparing(XMessageDAO::getTimestamp));
@@ -354,14 +353,14 @@ public class XMsgProcessingUtil {
     }
 
     /**
-     * Get App name as pair of 
-     	* Pair<is bot valid: true, Pair<Is Bot Check Needed, Bot Name>>
-     	* Pair<is bot valid: false, Pair<Bot Json, Bot Invalid Error Message>> 
+     * Find bot from starting message/last message,
+        * if not found, return error message
+        * else return bot data
      * @param text
      * @param from
      * @return
      */
-    private Mono<Map<String, Object>> getAppName(String text, SenderReceiverInfo from) {
+    private Mono<Map<String, Object>> fetchBotData(String text, SenderReceiverInfo from) {
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
         if (text != null && text.equals("")) {
             try {
@@ -445,7 +444,7 @@ public class XMsgProcessingUtil {
             }
         }
     }
-    
+
     private Mono<XMessageDAO> getLatestXMessage(String userID, LocalDateTime yesterday, String messageState) {
     	XMessageDAO xMessageDAO = (XMessageDAO) redisCacheService.getXMessageDaoCache(userID);
 	  	if(xMessageDAO != null) {
@@ -454,7 +453,7 @@ public class XMsgProcessingUtil {
 			+", status: "+xMessageDAO.getMessageState()+", timestamp: "+xMessageDAO.getTimestamp());
 	  		return Mono.just(xMessageDAO);
 	  	}
-        
+
     	return xMsgRepo.findAllByUserIdAndTimestampAfter(userID, yesterday)
                 .collectList()
                 .map(new Function<List<XMessageDAO>, XMessageDAO>() {
@@ -468,7 +467,7 @@ public class XMsgProcessingUtil {
 					                || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
                             		filteredList.add(xMessageDAO);
                             	}
-                                    
+
                             }
                             if (filteredList.size() > 0) {
                             	filteredList.sort(new Comparator<XMessageDAO>() {
@@ -478,7 +477,7 @@ public class XMsgProcessingUtil {
                                     }
                                 });
                             }
-                            
+
                             return xMessageDAOS.get(0);
                         }
                         return new XMessageDAO();
