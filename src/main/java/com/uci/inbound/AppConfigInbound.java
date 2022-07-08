@@ -4,12 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.uci.utils.CampaignService;
 import io.fusionauth.client.FusionAuthClient;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -74,9 +72,4 @@ public class AppConfigInbound {
 
     @Autowired
     private WebClient webClient;
-
-    @Bean
-    public CampaignService getCampaignService() {
-        return new CampaignService(webClient, fusionAuthClient, cache);
-    }
 }

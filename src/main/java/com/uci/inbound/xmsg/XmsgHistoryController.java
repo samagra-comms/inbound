@@ -4,11 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
-import com.uci.utils.CampaignService;
-import io.fusionauth.domain.HTTPHeaders;
+import com.uci.utils.BotService;
 import lombok.extern.slf4j.Slf4j;
-import messagerosa.core.model.XMessage;
-import org.checkerframework.checker.index.qual.Positive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.cassandra.core.query.CassandraPageRequest;
 import org.springframework.data.domain.PageRequest;
@@ -16,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
@@ -39,7 +35,7 @@ public class XmsgHistoryController {
     private XMessageRepository xMsgRepo;
 
     @Autowired
-    private CampaignService campaignService;
+    private BotService botService;
 
     enum MessageState {
         SENT,
@@ -91,12 +87,11 @@ public class XmsgHistoryController {
                             }
                         });
             } else if (botId != null && !botId.isEmpty()) {
-                return campaignService.getCampaignFromID(botId)
+                return botService.getBotNodeFromId(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Mono<Object>>() {
                             @Override
-                            public Mono<Object> apply(JsonNode jsonNode) {
-                                JsonNode campaignDetails = jsonNode.get("data");
+                            public Mono<Object> apply(JsonNode campaignDetails) {
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();

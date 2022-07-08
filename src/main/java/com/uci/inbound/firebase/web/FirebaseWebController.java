@@ -9,7 +9,6 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.utils.kafka.SimpleProducer;
-import com.uci.utils.service.VaultService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,9 +45,6 @@ public class FirebaseWebController {
     public BotService botService;
 
     @Autowired
-    public VaultService vaultService;
-
-    @Autowired
     public RedisCacheService redisCacheService;
 
     @Value("${outbound}")
@@ -64,7 +60,6 @@ public class FirebaseWebController {
 
         firebaseNotificationAdapter = FirebaseNotificationAdapter.builder()
                 .botService(botService)
-                .vaultService(vaultService)
                 .build();
 
         XMsgProcessingUtil.builder()

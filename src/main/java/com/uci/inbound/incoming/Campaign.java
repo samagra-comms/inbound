@@ -9,22 +9,19 @@ import com.uci.adapter.provider.factory.ProviderFactory;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.dao.utils.XMessageDAOUtils;
-import com.uci.utils.CampaignService;
+import com.uci.utils.BotService;
+import com.uci.utils.bot.util.BotUtil;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import javax.xml.bind.JAXBException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 @Slf4j
 @CrossOrigin
@@ -41,7 +38,7 @@ public class Campaign {
     private ProviderFactory factoryProvider;
 
     @Autowired
-    private CampaignService campaignService;
+    private BotService botService;
 
     @Autowired
     private XMessageRepository xMsgRepo;
@@ -54,16 +51,13 @@ public class Campaign {
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public void startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-//        kafkaProducer.send(campaign, campaignId);
-//        return;
-        campaignService.getCampaignFromID(campaignId).subscribe(node -> {
-                JsonNode data = node.get("data");
+        botService.getBotNodeFromId(campaignId).subscribe(data -> {
                 SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("7597185708").deviceType(DeviceType.PHONE).build();
                 SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
                 MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
-                XMessagePayload payload = new XMessagePayload().builder().text(data.path("startingMessage").asText()).build();
-                JsonNode adapter = data.findValues("logic").get(0).get(0).get("adapter");
-                log.info("adapter:"+adapter+", node:"+node);
+                XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
+                JsonNode adapter = BotUtil.getBotNodeAdapter(data);
+                log.info("adapter:"+adapter+", node:"+data);
                 if(adapter.path("provider").asText().equals("firebase")) {
                     from.setDeviceType(DeviceType.PHONE_FCM);
                 } else if(adapter.path("provider").asText().equals("pwa")) {
@@ -76,7 +70,8 @@ public class Campaign {
 
                 XMessage xmsg = new XMessage().builder()
                         .app(data.path("name").asText())
-                        .sessionId(newConversationSessionId())
+                        .adapterId(adapter.path("id").asText())
+                        .sessionId(BotUtil.newConversationSessionId())
                         .ownerId(ownerId)
                         .ownerOrgId(ownerOrgId)
                         .from(from)
@@ -98,14 +93,6 @@ public class Campaign {
                         });
             }
         );
-    }
-
-    /**
-     * New Conversation Session UUID
-     * @return
-     */
-    private UUID newConversationSessionId() {
-        return UUID.randomUUID();
     }
 
     private void sendEventToKafka(XMessage xmsg) {
