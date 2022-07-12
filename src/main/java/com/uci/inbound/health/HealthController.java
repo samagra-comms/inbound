@@ -5,15 +5,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.service.HealthService;
 import com.uci.utils.azure.AzureBlobService;
+import com.uci.utils.bot.util.DateUtil;
 import com.uci.utils.cdn.samagra.MinioClientService;
 
+import com.uci.utils.model.ApiResponse;
+import com.uci.utils.model.ApiResponseParams;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -33,20 +36,19 @@ public class HealthController {
     private MinioClientService minioClientService;
 	
     @RequestMapping(value = "/health", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> statusCheck() throws JsonProcessingException, IOException {
+    public ResponseEntity<ApiResponse> statusCheck() throws JsonProcessingException, IOException {
         log.error("Health API called");
         ObjectMapper mapper = new ObjectMapper();
-        /* Current Date Time */
-        LocalDateTime localNow = LocalDateTime.now();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        String dateString = fmt.format(localNow).toString();
-        
-        JsonNode jsonNode = mapper.readTree("{\"id\":\"api.content.health\",\"ver\":\"3.0\",\"ts\":\"2021-06-26T22:47:05Z+05:30\",\"params\":{\"resmsgid\":\"859fee0c-94d6-4a0d-b786-2025d763b78a\",\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"checks\":[{\"name\":\"redis cache\",\"healthy\":true},{\"name\":\"graph db\",\"healthy\":true},{\"name\":\"cassandra db\",\"healthy\":true}],\"healthy\":true}}");
-        
-//        ((ObjectNode) jsonNode).put("ts", dateString);
-//        ((ObjectNode) jsonNode).put("result", healthService.getAllHealthNode());
-        
-        return ResponseEntity.ok(jsonNode);
+        JsonNode resultNode = mapper.readTree("{\"checks\":[{\"name\":\"redis cache\",\"healthy\":true},{\"name\":\"graph db\",\"healthy\":true},{\"name\":\"cassandra db\",\"healthy\":true}],\"healthy\":true}");
+        ApiResponse response = ApiResponse.builder()
+                .id("api.health")
+                .params(ApiResponseParams.builder().build())
+                .responseCode(HttpStatus.OK.name())
+                .result(resultNode)
+//                .result(healthService.getAllHealthNode())
+                .build();
+
+        return ResponseEntity.ok(response);
     }
     
     @RequestMapping(value = "/image-signed-url", method = RequestMethod.GET)
