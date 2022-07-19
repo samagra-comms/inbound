@@ -69,6 +69,7 @@ public class Campaign {
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
                 XMessage xmsg = new XMessage().builder()
+                        .botId(UUID.fromString(data.path("id").asText()))
                         .app(data.path("name").asText())
                         .adapterId(adapter.path("id").asText())
                         .sessionId(BotUtil.newConversationSessionId())
