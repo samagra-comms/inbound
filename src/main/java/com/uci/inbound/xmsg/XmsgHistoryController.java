@@ -4,21 +4,28 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
-import com.uci.utils.BotService;
+import com.uci.utils.CampaignService;
+import com.uci.utils.model.HttpApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import messagerosa.core.model.XMessage;
+import messagerosa.xml.XMessageParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.cassandra.core.query.CassandraPageRequest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 
@@ -35,7 +42,7 @@ public class XmsgHistoryController {
     private XMessageRepository xMsgRepo;
 
     @Autowired
-    private BotService botService;
+    private CampaignService campaignService;
 
     enum MessageState {
         SENT,
@@ -43,22 +50,26 @@ public class XmsgHistoryController {
         READ;
     }
 
-    @RequestMapping(value = "/getBotHistory", method = RequestMethod.GET, produces = {"application/json", "text/json"})
-    public Mono<Object> getBotHistory(@RequestParam(value = "botId", required = false) String botId,
+    @RequestMapping(value = "/history", method = RequestMethod.GET, produces = {"application/json", "text/json"})
+    public Mono<Object> getHistory(@RequestParam(value = "botId", required = false) String botId,
                                       @RequestParam(value = "userId", required = false) String userId,
                                       @RequestParam("startDate") String startDate,
                                       @RequestParam("endDate") String endDate,
                                       @RequestParam(value = "provider", defaultValue = "firebase") String provider,
                                       @RequestParam(value = "msgId", required = false) String msgId) {
         try {
-            XMessageHistoryResponse response = new XMessageHistoryResponse();
+            HttpApiResponse response = HttpApiResponse.builder()
+                    .status(HttpStatus.OK.value())
+                    .path("/xmsg/history")
+                    .build();
             if (botId == null && userId == null) {
-                response.setStatusCode(HttpStatus.BAD_REQUEST.value());
-                response.setErrorMsg("Bot id/user id required.");
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+                response.setMessage("Bot id/user id required.");
                 return Mono.just(response);
             }
 
-            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 10000),
+            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 1000),
                     null
             );
 
@@ -67,31 +78,30 @@ public class XmsgHistoryController {
             Date endD = formatter.parse(endDate);
             Timestamp startTimestamp = new Timestamp(startD.getTime());
             Timestamp endTimestamp = new Timestamp(endD.getTime());
+            endTimestamp.setHours(23);
+            endTimestamp.setMinutes(59);
+            endTimestamp.setSeconds(59);
 
             if (userId != null && !userId.isEmpty()) {
                 return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
                         .map(new Function<Slice<XMessageDAO>, Object>() {
                             @Override
                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                response.setStatusCode(HttpStatus.OK.value());
-                                response.setRecords(xMessageDAOS.getContent());
-//                                        if(xMessageDAOS.isLast()) {
-//                                            response.setNextCursorMark(DEFAULT_CURSOR_MARK);
-//                                        } else {
-//                                            response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
-//                                            log.info("after cursor");
-//                                        }
-                                List<XMessageDAO> xMessageDAOListNew = filterMessageState(xMessageDAOS);
-                                response.setRecords(xMessageDAOListNew);
+                                Map<String, Object> result = new HashMap<>();
+                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                                result.put("total", xMessageDAOListNew.size());
+                                result.put("records", xMessageDAOListNew);
+                                response.setResult(result);
                                 return response;
                             }
                         });
             } else if (botId != null && !botId.isEmpty()) {
-                return botService.getBotNodeFromId(botId)
+                return campaignService.getCampaignFromID(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Mono<Object>>() {
                             @Override
-                            public Mono<Object> apply(JsonNode campaignDetails) {
+                            public Mono<Object> apply(JsonNode jsonNode) {
+                                JsonNode campaignDetails = jsonNode.get("data");
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
@@ -100,17 +110,11 @@ public class XmsgHistoryController {
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                                response.setStatusCode(HttpStatus.OK.value());
-                                                response.setRecords(xMessageDAOS.getContent());
-
-//                                                if(xMessageDAOS.isLast()) {
-//                                                    response.setNextCursorMark(DEFAULT_CURSOR_MARK);
-//                                                } else {
-//                                                    response.setNextCursorMark(toHexString(((CassandraPageRequest)xMessageDAOS.getPageable()).getPagingState()));
-//                                                    log.info("after cursor");
-//                                                }
-                                                List<XMessageDAO> xMessageDAOListNew = filterMessageState(xMessageDAOS);
-                                                response.setRecords(xMessageDAOListNew);
+                                                Map<String, Object> result = new HashMap<>();
+                                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                                                result.put("total", xMessageDAOListNew.size());
+                                                result.put("records", xMessageDAOListNew);
+                                                response.setResult(result);
                                                 return response;
                                             }
                                         });
@@ -119,6 +123,92 @@ public class XmsgHistoryController {
                             @Override
                             public Mono<? extends Object> apply(Mono<Object> objectFlux) {
                                 return objectFlux;
+                            }
+                        });
+
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+    @RequestMapping(value = "/history/dump", method = RequestMethod.GET, produces = {"application/json", "text/json"})
+    public Object getHistoryDump(@RequestParam(value = "botId", required = false) String botId,
+                                      @RequestParam(value = "userId", required = false) String userId,
+                                      @RequestParam("startDate") String startDate,
+                                      @RequestParam("endDate") String endDate,
+                                      @RequestParam(value = "provider", defaultValue = "firebase") String provider,
+                                      @RequestParam(value = "msgId", required = false) String msgId) {
+        try {
+            HttpApiResponse response = HttpApiResponse.builder()
+                    .status(HttpStatus.OK.value())
+                    .path("/xmsg/history/dump")
+                    .build();
+            if (botId == null && userId == null) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+                response.setMessage("Bot id/user id required.");
+                return Mono.just(response);
+            }
+
+            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 10000000),
+                    null
+            );
+
+            DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+            Date startD = formatter.parse(startDate);
+            Date endD = formatter.parse(endDate);
+            Timestamp startTimestamp = new Timestamp(startD.getTime());
+            Timestamp endTimestamp = new Timestamp(endD.getTime());
+            endTimestamp.setHours(23);
+            endTimestamp.setMinutes(59);
+            endTimestamp.setSeconds(59);
+            long differenceInDays = ((endTimestamp.getTime()-startTimestamp.getTime())/ (1000 * 60 * 60 * 24))%365;
+
+            if(differenceInDays > 15) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+                response.setMessage("Start & end date difference should not exceed 15 days.");
+                return Mono.just(response);
+            }
+
+            if (userId != null && !userId.isEmpty()) {
+                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
+                        .map(new Function<Slice<XMessageDAO>, Object>() {
+                            @Override
+                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
+                                Map<String, Object> result = new HashMap<>();
+                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                                result.put("total", xMessageDAOListNew.size());
+                                result.put("records", xMessageDAOListNew);
+                                response.setResult(result);
+                                return response;
+                            }
+                        });
+            } else if (botId != null && !botId.isEmpty()) {
+                return campaignService.getCampaignFromID(botId)
+                        .doOnError(s -> log.info(s.getMessage()))
+                        .map(new Function<JsonNode, Object>() {
+                            @Override
+                            public Object apply(JsonNode jsonNode) {
+                                JsonNode campaignDetails = jsonNode.get("data");
+                                ObjectMapper mapper = new ObjectMapper();
+
+                                String botName = campaignDetails.path("name").asText();
+
+                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
+                                        .map(new Function<Slice<XMessageDAO>, Object>() {
+                                            @Override
+                                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
+                                                Map<String, Object> result = new HashMap<>();
+                                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                                                result.put("total", xMessageDAOListNew.size());
+                                                result.put("records", xMessageDAOListNew);
+                                                response.setResult(result);
+                                                return response;
+                                            }
+                                        });
                             }
                         });
 
@@ -145,8 +235,7 @@ public class XmsgHistoryController {
         return r.toString();
     }
 
-    public List<XMessageDAO> filterMessageState(Slice<XMessageDAO> xMessageDAOS) {
-        List<XMessageDAO> xMessageDAOList = xMessageDAOS.getContent();
+    public List<Map<String, Object>> filterMessageState(List<XMessageDAO> xMessageDAOList) {
 
         Set<String> messageIdSet = new HashSet<>();
         Map<String, XMessageDAO> sentMap = new HashMap<>();
@@ -167,6 +256,7 @@ public class XmsgHistoryController {
         });
 
         List<XMessageDAO> xMessageDAOListNew = new ArrayList<>();
+        /* Add message receipts with highest message state only in order READ->DELIVERED->SENT, given READ is highest order */
         messageIdSet.forEach(messageId -> {
             if (readMap != null && readMap.containsKey(messageId)) {
                 xMessageDAOListNew.add(readMap.get(messageId));
@@ -176,8 +266,36 @@ public class XmsgHistoryController {
                 xMessageDAOListNew.add(sentMap.get(messageId));
             }
         });
+        /* Sort by timestamp in descending order */
+        List<Map<String, Object>> list = new ArrayList<>();
+        xMessageDAOListNew.sort(Comparator.comparing(XMessageDAO::getTimestamp).reversed());
+        xMessageDAOListNew.forEach(xMessageDAO -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", xMessageDAO.getId());
+            map.put("messageState", xMessageDAO.getMessageState());
+            map.put("channel", xMessageDAO.getChannel());
+            map.put("provider", xMessageDAO.getProvider());
+            map.put("fromId", xMessageDAO.getFromId());
+            map.put("userId", xMessageDAO.getUserId());
+            map.put("ownerId", xMessageDAO.getOwnerId());
+            map.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
+            map.put("sessionId", xMessageDAO.getSessionId());
+            map.put("botUuid", xMessageDAO.getBotUuid());
+//            map.put("xMessage", xMessageDAO.getXMessage());
+            map.put("timestamp", xMessageDAO.getTimestamp());
+            try{
+                if(sentMap.get(xMessageDAO.getMessageId()) != null) {
+                    String xMessage = sentMap.get(xMessageDAO.getMessageId()).getXMessage();
+                    XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
+                    map.put("payload", currentXmsg.getPayload());
+                }
+            } catch (Exception ex) {
+                log.error("Exception when fetching payload: "+ex.getMessage());
+            }
 
-        return xMessageDAOListNew;
+            list.add(map);
+        });
+        return list;
     }
 
 }

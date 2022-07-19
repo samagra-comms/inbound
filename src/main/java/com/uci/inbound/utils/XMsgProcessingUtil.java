@@ -55,7 +55,6 @@ public class XMsgProcessingUtil {
     public void process() throws JsonProcessingException {
 
         log.info("incoming message {}", new ObjectMapper().writeValueAsString(inboundMessage));
-
         try {
             adapter.convertMessageToXMsg(inboundMessage)
                     .doOnError(genericError("Error in converting to XMessage by Adapter"))
@@ -135,6 +134,7 @@ public class XMsgProcessingUtil {
                                                 xmsg.setSessionId(xMessageLast.getSessionId());
                                                 xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
                                                 xmsg.setOwnerId(xMessageLast.getOwnerId());
+                                                xmsg.setBotId(xMessageLast.getBotUuid());
                                                 XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
                                                 xMsgRepo.insert(currentMessageToBeInserted)
                                                         .doOnError(genericError("Error in inserting current message"))
@@ -171,7 +171,8 @@ public class XMsgProcessingUtil {
      */
     private void processInvalidBotMessage(XMessage xmsg, ObjectNode botNode, String message) {
         if(botNode != null) {
-            xmsg.setApp(BotUtil.getBotNodeData(botNode, "name"));
+	    xmsg.setBotId(UUID.fromString(BotUtil.getBotNodeData(botNode, "id")));
+	    xmsg.setApp(BotUtil.getBotNodeData(botNode, "name"));
             xmsg.setAdapterId(BotUtil.getBotNodeAdapterId(botNode));
         }
 
@@ -192,13 +193,13 @@ public class XMsgProcessingUtil {
             	sendEventToOutboundKafka(xmsg);
             });
     }
-
+    
     /**
      * Process Bot Message - send message to orchestrator for processing
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId) {
+    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId, Object BotUuid) {
     	xmsg.setApp(appName);
         if(sessionId != null && !sessionId.toString().isEmpty()) {
             xmsg.setSessionId(UUID.fromString(sessionId.toString()));
@@ -211,6 +212,9 @@ public class XMsgProcessingUtil {
         }
         if(adapterId != null && !adapterId.toString().isEmpty()) {
             xmsg.setAdapterId(adapterId.toString());
+        }
+	if(botUuid != null && !botUuid.toString().isEmpty()) {
+            xmsg.setBotId(UUID.fromString(botUuid.toString()));
         }
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
@@ -274,6 +278,7 @@ public class XMsgProcessingUtil {
                                     dataMap.put("ownerOrgId", BotUtil.getBotNodeData(botNode, "ownerOrgID"));
                                     dataMap.put("ownerId", BotUtil.getBotNodeData(botNode, "ownerID"));
                                     dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
+				    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode, "id"));
                                     return Mono.just(dataMap);
                                 }
                         	} else {
@@ -315,7 +320,7 @@ public class XMsgProcessingUtil {
         }
 
     }
-
+    
     private void sendEventToOutboundKafka(XMessage xmsg) {
         String xmessage = null;
         try {
@@ -340,7 +345,7 @@ public class XMsgProcessingUtil {
                         	if (xMessageDAO.getMessageState().equals(messageState.name())) {
                             	filteredList.add(xMessageDAO);
                             }
-
+                                
                         }
                         if (filteredList.size() > 0) {
                             filteredList.sort(Comparator.comparing(XMessageDAO::getTimestamp));
@@ -444,7 +449,7 @@ public class XMsgProcessingUtil {
             }
         }
     }
-
+    
     private Mono<XMessageDAO> getLatestXMessage(String userID, LocalDateTime yesterday, String messageState) {
     	XMessageDAO xMessageDAO = (XMessageDAO) redisCacheService.getXMessageDaoCache(userID);
 	  	if(xMessageDAO != null) {
@@ -453,7 +458,7 @@ public class XMsgProcessingUtil {
 			+", status: "+xMessageDAO.getMessageState()+", timestamp: "+xMessageDAO.getTimestamp());
 	  		return Mono.just(xMessageDAO);
 	  	}
-
+        
     	return xMsgRepo.findAllByUserIdAndTimestampAfter(userID, yesterday)
                 .collectList()
                 .map(new Function<List<XMessageDAO>, XMessageDAO>() {
@@ -467,7 +472,7 @@ public class XMsgProcessingUtil {
 					                || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
                             		filteredList.add(xMessageDAO);
                             	}
-
+                                    
                             }
                             if (filteredList.size() > 0) {
                             	filteredList.sort(new Comparator<XMessageDAO>() {
@@ -477,7 +482,7 @@ public class XMsgProcessingUtil {
                                     }
                                 });
                             }
-
+                            
                             return xMessageDAOS.get(0);
                         }
                         return new XMessageDAO();
@@ -536,6 +541,7 @@ public class XMsgProcessingUtil {
         dataMap.put("appName", getXMessageAppName(xMessageLast));
         dataMap.put("ownerOrgId", getXMessageOwnerOrgId(xMessageLast));
         dataMap.put("ownerId", getXMessageOwnerId(xMessageLast));
+        dataMap.put("botUuid", getXMessageBotUuid(xMessageLast));
 
         return dataMap;
     }
@@ -555,7 +561,8 @@ public class XMsgProcessingUtil {
         dataMap.put("ownerOrgId", BotUtil.getBotNodeData(botNode,"ownerOrgID"));
         dataMap.put("ownerId", BotUtil.getBotNodeData(botNode,"ownerID"));
         dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
-        return dataMap;
+	dataMap.put("botUuid", BotUtil.getBotNodeData(botNode,"id"));        
+	return dataMap;
     }
 
     /**
@@ -565,6 +572,15 @@ public class XMsgProcessingUtil {
      */
     private String getXMessageAppName(XMessageDAO xMessageDAO) {
         return (xMessageDAO.getApp() == null || xMessageDAO.getApp().isEmpty()) ? "finalAppName" : xMessageDAO.getApp();
+    }
+
+    /**
+     * Get Owner UUID as string from XMessage Dao
+     * @param xMessageDAO
+     * @return
+     */
+    private String getXMessageBotUuid(XMessageDAO xMessageDAO) {
+        return xMessageDAO.getBotUuid() != null ? xMessageDAO.getBotUuid().toString() : null;
     }
 
     /**
