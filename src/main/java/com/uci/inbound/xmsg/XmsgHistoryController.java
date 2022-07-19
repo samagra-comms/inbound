@@ -270,30 +270,46 @@ public class XmsgHistoryController {
         List<Map<String, Object>> list = new ArrayList<>();
         xMessageDAOListNew.sort(Comparator.comparing(XMessageDAO::getTimestamp).reversed());
         xMessageDAOListNew.forEach(xMessageDAO -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", xMessageDAO.getId());
-            map.put("messageState", xMessageDAO.getMessageState());
-            map.put("channel", xMessageDAO.getChannel());
-            map.put("provider", xMessageDAO.getProvider());
-            map.put("fromId", xMessageDAO.getFromId());
-            map.put("userId", xMessageDAO.getUserId());
-            map.put("ownerId", xMessageDAO.getOwnerId());
-            map.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
-            map.put("sessionId", xMessageDAO.getSessionId());
-            map.put("botUuid", xMessageDAO.getBotUuid());
+            Map<String, Object> daoMap = new HashMap<>();
+            daoMap.put("id", xMessageDAO.getId());
+            daoMap.put("messageState", xMessageDAO.getMessageState());
+            daoMap.put("channel", xMessageDAO.getChannel());
+            daoMap.put("provider", xMessageDAO.getProvider());
+            daoMap.put("fromId", xMessageDAO.getFromId());
+            daoMap.put("userId", xMessageDAO.getUserId());
+            daoMap.put("ownerId", xMessageDAO.getOwnerId());
+            daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
+            daoMap.put("sessionId", xMessageDAO.getSessionId());
+            daoMap.put("botUuid", xMessageDAO.getBotUuid());
 //            map.put("xMessage", xMessageDAO.getXMessage());
-            map.put("timestamp", xMessageDAO.getTimestamp());
+            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try{
                 if(sentMap.get(xMessageDAO.getMessageId()) != null) {
                     String xMessage = sentMap.get(xMessageDAO.getMessageId()).getXMessage();
                     XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
-                    map.put("payload", currentXmsg.getPayload());
+                    Map<String, Object> payloadMap= new HashMap<>();
+                    if(currentXmsg.getPayload().getText() != null) {
+                        payloadMap.put("text", currentXmsg.getPayload().getText());
+                    }
+                    if(currentXmsg.getPayload().getMedia() != null) {
+                        payloadMap.put("media", currentXmsg.getPayload().getMedia());
+                    }
+                    if(currentXmsg.getPayload().getButtonChoices() != null) {
+                        payloadMap.put("buttonChoices", currentXmsg.getPayload().getButtonChoices());
+                    }
+                    if(currentXmsg.getPayload().getLocation() != null) {
+                        payloadMap.put("location", currentXmsg.getPayload().getLocation());
+                    }
+                    if(currentXmsg.getPayload().getContactCard() != null) {
+                        payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
+                    }
+                    daoMap.put("payload", payloadMap);
                 }
             } catch (Exception ex) {
                 log.error("Exception when fetching payload: "+ex.getMessage());
             }
 
-            list.add(map);
+            list.add(daoMap);
         });
         return list;
     }
