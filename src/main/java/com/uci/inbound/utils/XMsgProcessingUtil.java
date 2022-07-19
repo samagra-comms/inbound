@@ -79,7 +79,7 @@ public class XMsgProcessingUtil {
                                                 log.info("Process bot message");
                                                 processBotMessage(xmsg, result.get("appName").toString(),
                                                         result.get("sessionId"), result.get("ownerOrgId"),
-                                                        result.get("ownerId"), result.get("adapterId"));
+                                                        result.get("ownerId"), result.get("adapterId"), result.get("botUuid"));
                                             } else {
                                                 /* Bot is not valid */
                                                 /**
@@ -99,7 +99,7 @@ public class XMsgProcessingUtil {
                                                                         log.info("Process bot message after validation.");
                                                                         processBotMessage(xmsg, res.get("appName").toString(),
                                                                                 res.get("sessionId"), res.get("ownerOrgId"),
-                                                                                res.get("ownerId"), res.get("adapterId"));
+                                                                                res.get("ownerId"), res.get("adapterId"), res.get("botUuid"));
                                                                     } else {
                                                                         log.info("Bot is invalid after validation");
                                                                         processInvalidBotMessage(xmsg, (ObjectNode) res.get("botNode"), res.get("errorMsg").toString());
@@ -171,8 +171,11 @@ public class XMsgProcessingUtil {
      */
     private void processInvalidBotMessage(XMessage xmsg, ObjectNode botNode, String message) {
         if(botNode != null) {
-	    xmsg.setBotId(UUID.fromString(BotUtil.getBotNodeData(botNode, "id")));
-	    xmsg.setApp(BotUtil.getBotNodeData(botNode, "name"));
+            xmsg.setBotId(UUID.fromString(BotUtil.getBotNodeData(botNode, "id")));
+            xmsg.setApp(BotUtil.getBotNodeData(botNode, "name"));
+            xmsg.setOwnerId(BotUtil.getBotNodeData(botNode, "ownerID"));
+            xmsg.setOwnerOrgId(BotUtil.getBotNodeData(botNode, "ownerOrgID"));
+            xmsg.setSessionId(BotUtil.newConversationSessionId());
             xmsg.setAdapterId(BotUtil.getBotNodeAdapterId(botNode));
         }
 
@@ -199,7 +202,7 @@ public class XMsgProcessingUtil {
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId, Object BotUuid) {
+    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId, Object botUuid) {
     	xmsg.setApp(appName);
         if(sessionId != null && !sessionId.toString().isEmpty()) {
             xmsg.setSessionId(UUID.fromString(sessionId.toString()));
@@ -213,7 +216,7 @@ public class XMsgProcessingUtil {
         if(adapterId != null && !adapterId.toString().isEmpty()) {
             xmsg.setAdapterId(adapterId.toString());
         }
-	if(botUuid != null && !botUuid.toString().isEmpty()) {
+	    if(botUuid != null && !botUuid.toString().isEmpty()) {
             xmsg.setBotId(UUID.fromString(botUuid.toString()));
         }
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
@@ -278,7 +281,7 @@ public class XMsgProcessingUtil {
                                     dataMap.put("ownerOrgId", BotUtil.getBotNodeData(botNode, "ownerOrgID"));
                                     dataMap.put("ownerId", BotUtil.getBotNodeData(botNode, "ownerID"));
                                     dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
-				    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode, "id"));
+				                    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode, "id"));
                                     return Mono.just(dataMap);
                                 }
                         	} else {
@@ -561,8 +564,8 @@ public class XMsgProcessingUtil {
         dataMap.put("ownerOrgId", BotUtil.getBotNodeData(botNode,"ownerOrgID"));
         dataMap.put("ownerId", BotUtil.getBotNodeData(botNode,"ownerID"));
         dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
-	dataMap.put("botUuid", BotUtil.getBotNodeData(botNode,"id"));        
-	return dataMap;
+	    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode,"id"));
+	    return dataMap;
     }
 
     /**

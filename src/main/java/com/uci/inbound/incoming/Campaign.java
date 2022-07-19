@@ -63,18 +63,16 @@ public class Campaign {
                 } else if(adapter.path("provider").asText().equals("pwa")) {
                     from.setDeviceType(DeviceType.PHONE_PWA);
                 }
-                String ownerOrgId = data.path("ownerOrgID") != null && !data.path("ownerOrgID").asText().equals("null") ? data.path("ownerOrgID").asText() : null;
-                String ownerId = data.path("ownerID") != null && !data.path("ownerID").asText().equals("null") ? data.path("ownerID").asText() : null;
 
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
                 XMessage xmsg = new XMessage().builder()
-                        .botId(UUID.fromString(data.path("id").asText()))
-                        .app(data.path("name").asText())
-                        .adapterId(adapter.path("id").asText())
+                        .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
+                        .app(BotUtil.getBotNodeData(data, "name"))
+                        .adapterId(BotUtil.getBotNodeAdapterId(data))
                         .sessionId(BotUtil.newConversationSessionId())
-                        .ownerId(ownerId)
-                        .ownerOrgId(ownerOrgId)
+                        .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
+                        .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
                         .from(from)
                         .to(to)
                         .messageId(msgId)
