@@ -13,8 +13,11 @@ import com.uci.dao.service.HealthService;
 import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.utils.kafka.KafkaConfig;
 
+import com.uci.utils.model.ApiResponse;
+import com.uci.utils.model.ApiResponseParams;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -40,39 +43,41 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServiceStatusController {
 	@Autowired 
 	private HealthService healthService;
-
-    @Autowired
-    private RedisCacheService redisCacheService;
-
-    @RequestMapping(value = "/health", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> statusCheck() throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode json = mapper.readTree("{\"id\":\"api.content.service.health\",\"ver\":\"3.0\",\"ts\":null,\"params\":{\"resmsgid\":null,\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"healthy\":true}}");
-        return ResponseEntity.ok(json);
-    }
     
     @RequestMapping(value = "/health/cassandra", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> cassandraStatusCheck() throws IOException, JsonProcessingException {
-    	JsonNode jsonNode = getResponseJsonNode();
-    	((ObjectNode) jsonNode).put("result", healthService.getCassandraHealthNode());
+    public ResponseEntity<ApiResponse> cassandraStatusCheck() throws IOException, JsonProcessingException {
+    	ApiResponse response = ApiResponse.builder()
+                .id("api.service.health.cassandra")
+                .params(ApiResponseParams.builder().build())
+                .responseCode(HttpStatus.OK.name())
+                .result(healthService.getCassandraHealthNode())
+                .build();
     	
-        return ResponseEntity.ok(jsonNode);
+        return ResponseEntity.ok(response);
     }
     
     @RequestMapping(value = "/health/kafka", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> kafkaStatusCheck() throws IOException, JsonProcessingException {
-    	JsonNode jsonNode = getResponseJsonNode();
-    	((ObjectNode) jsonNode).put("result", healthService.getKafkaHealthNode());
-        
-        return ResponseEntity.ok(jsonNode);
+    public ResponseEntity<ApiResponse> kafkaStatusCheck() throws IOException, JsonProcessingException {
+        ApiResponse response = ApiResponse.builder()
+                .id("api.service.health.kafka")
+                .params(ApiResponseParams.builder().build())
+                .responseCode(HttpStatus.OK.name())
+                .result(healthService.getKafkaHealthNode())
+                .build();
+
+        return ResponseEntity.ok(response);
     }
     
     @RequestMapping(value = "/health/campaign", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> campaignUrlStatusCheck() throws JsonProcessingException, IOException {
-    	JsonNode jsonNode = getResponseJsonNode();
-        ((ObjectNode) jsonNode).put("result", healthService.getCampaignUrlHealthNode());
-        
-        return ResponseEntity.ok(jsonNode);
+    public ResponseEntity<ApiResponse> campaignUrlStatusCheck() throws JsonProcessingException, IOException {
+        ApiResponse response = ApiResponse.builder()
+                .id("api.service.health.campaign")
+                .params(ApiResponseParams.builder().build())
+                .responseCode(HttpStatus.OK.name())
+                .result(healthService.getCampaignUrlHealthNode())
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
@@ -99,18 +104,5 @@ public class ServiceStatusController {
         result.put("data", arrayNode);
 
         return ResponseEntity.ok(result);
-    }
-    
-    /**
-     * Returns json node for service response
-     * 
-     * @return JsonNode
-     * @throws JsonMappingException
-     * @throws JsonProcessingException
-     */
-    private JsonNode getResponseJsonNode() throws JsonMappingException, JsonProcessingException {
-    	ObjectMapper mapper = new ObjectMapper();
-    	JsonNode jsonNode = mapper.readTree("{\"id\":\"api.content.service.health\",\"ver\":\"3.0\",\"ts\":null,\"params\":{\"resmsgid\":null,\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"healthy\":false}}");
-        return jsonNode;
     }
 }
