@@ -215,6 +215,7 @@ public class FusionAuthController {
                                     token.put("fcmToken", device.get("id"));
                                     token.put("phoneNo", userMap.get("mobilePhone"));
                                     token.put("name", userMap.get("username"));
+                                    token.put("fcmClickActionUrl", "http://localhost:3000");
                                     tokens.add(token);
                                 }
                             }
@@ -228,7 +229,13 @@ public class FusionAuthController {
 
                 return ResponseEntity.ok(responseNode);
             } else {
-                responseNode.put("errorMessage", result.errorResponse.toString());
+                if(result.status == 401) {
+                    responseNode.put("errorMessage", "401 - Unauthorized");
+                } else if(result.errorResponse != null) {
+                    responseNode.put("errorMessage", result.errorResponse.toString());
+                } else {
+                    responseNode.put("errorMessage", "Error while fetching data from fusion auth.");
+                }
                 return ResponseEntity.badRequest().body(responseNode);
             }
 
