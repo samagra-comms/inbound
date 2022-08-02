@@ -7,7 +7,9 @@ import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.cdn.FileCdnFactory;
+import com.uci.utils.kafka.RecordProducer;
 import com.uci.utils.kafka.SimpleProducer;
+import io.opentelemetry.api.trace.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import com.uci.utils.BotService;
 import com.uci.utils.azure.AzureBlobService;
@@ -40,7 +42,10 @@ public class NetcoreWhatsappConverter {
     private NetcoreWhatsappAdapter netcoreWhatsappAdapter;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+    @Autowired
+    public Tracer tracer;
 
     @Autowired
     public XMessageRepository xmsgRepo;

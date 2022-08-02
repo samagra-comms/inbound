@@ -13,7 +13,9 @@ import com.uci.dao.utils.XMessageDAOUtils;
 import com.uci.utils.BotService;
 import com.uci.utils.bot.util.BotUtil;
 import com.uci.utils.cache.service.RedisCacheService;
+import com.uci.utils.kafka.RecordProducer;
 import com.uci.utils.kafka.SimpleProducer;
+import io.opentelemetry.context.Context;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.SenderReceiverInfo;
@@ -39,7 +41,7 @@ public class XMsgProcessingUtil {
 
     AbstractProvider adapter;
     CommonMessage inboundMessage;
-    SimpleProducer kafkaProducer;
+    RecordProducer kafkaProducer;
     XMessageRepository xMsgRepo;
     String topicSuccess;
     String topicFailure;
@@ -67,7 +69,7 @@ public class XMsgProcessingUtil {
                                         /* If bot is invalid, send error message to outbound, else process message */
                                         if (result.get("botExists").toString().equals("false")) {
                                             log.info("Bot is invalid");
-                                            processInvalidBotMessage(xmsg, (ObjectNode) result.get("botNode"), result.get("errorMsg").toString());
+                                            processInvalidBotMessage(xmsg, (ObjectNode) result.get("botNode"), result.get("errorMsg").toString(), Context.current());
                                         } else {
                                             /* If bot check required, validate bot, else process message */
                                             if (result.get("botCheckRequired").toString().equals("true")) {
@@ -78,17 +80,17 @@ public class XMsgProcessingUtil {
                                                             /* If bot is invalid, send error message to outbound, else process message */
                                                             if (!res.get("botValid").toString().equals("true")) {
                                                                 log.info("Bot is invalid");
-                                                                processInvalidBotMessage(xmsg, (ObjectNode) res.get("botNode"), res.get("errorMsg").toString());
+                                                                processInvalidBotMessage(xmsg, (ObjectNode) res.get("botNode"), res.get("errorMsg").toString(), Context.current());
                                                             } else {
                                                                 log.info("Process bot message");
                                                                 String appName = res.get("appName").toString();
-                                                                processBotMessage(xmsg, res.get("appName").toString(), result.get("sessionId"), result.get("ownerOrgId"), result.get("ownerId"), result.get("botUuid"));
+                                                                processBotMessage(xmsg, res.get("appName").toString(), result.get("sessionId"), result.get("ownerOrgId"), result.get("ownerId"), result.get("botUuid"), Context.current());
                                                             }
                                                         });
                                             } else {
                                                 log.info("Process bot message");
                                                 String appName = result.get("appName").toString();
-                                                processBotMessage(xmsg, appName, result.get("sessionId"), result.get("ownerOrgId"), result.get("ownerId"), result.get("botUuid"));
+                                                processBotMessage(xmsg, appName, result.get("sessionId"), result.get("ownerOrgId"), result.get("ownerId"), result.get("botUuid"), Context.current());
                                             }
                                         }
                                     });
@@ -110,7 +112,7 @@ public class XMsgProcessingUtil {
                                                 xMsgRepo.insert(currentMessageToBeInserted)
                                                         .doOnError(genericError("Error in inserting current message"))
                                                         .subscribe(xMessageDAO -> {
-                                                            sendEventToKafka(xmsg);
+                                                            sendEventToKafka(xmsg, Context.current());
                                                         });
                                             } else {
                                                 log.error("App name not found for user id: "+xmsg.getFrom().getUserID()+" for sent/delivered/read message");
@@ -140,7 +142,7 @@ public class XMsgProcessingUtil {
      * @param botNode
      * @param message
      */
-    private void processInvalidBotMessage(XMessage xmsg, ObjectNode botNode, String message) {
+    private void processInvalidBotMessage(XMessage xmsg, ObjectNode botNode, String message, Context currentContext) {
         xmsg.setBotId(UUID.fromString(botNode.path("id").asText()));
         xmsg.setApp(botNode.path("name").asText());
     	XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
@@ -164,7 +166,7 @@ public class XMsgProcessingUtil {
             	xmsg.setAdapterId(campaignId);
             	XMessagePayload payload = XMessagePayload.builder().text(message).build();
             	xmsg.setPayload(payload);
-            	sendEventToOutboundKafka(xmsg);
+            	sendEventToOutboundKafka(xmsg, currentContext);
             });
     }
     
@@ -173,7 +175,7 @@ public class XMsgProcessingUtil {
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object botUuid) {
+    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object botUuid, Context currentContext) {
     	xmsg.setApp(appName);
         if(sessionId != null && !sessionId.toString().isEmpty()) {
             xmsg.setSessionId(UUID.fromString(sessionId.toString()));
@@ -204,7 +206,7 @@ public class XMsgProcessingUtil {
                                             xMsgRepo.insert(currentMessageToBeInserted)
                                                     .doOnError(genericError("Error in inserting current message"))
                                                     .subscribe(insertedMessage -> {
-                                                        sendEventToKafka(xmsg);
+                                                        sendEventToKafka(xmsg, currentContext);
                                                     });
                                         }
                                     });
@@ -214,7 +216,7 @@ public class XMsgProcessingUtil {
             xMsgRepo.insert(currentMessageToBeInserted)
                     .doOnError(genericError("Error in inserting current message"))
                     .subscribe(xMessageDAO -> {
-                        sendEventToKafka(xmsg);
+                        sendEventToKafka(xmsg, currentContext);
                     });
         }
     }
@@ -276,23 +278,23 @@ public class XMsgProcessingUtil {
         return !xmsg.getMessageState().equals(XMessage.MessageState.REPLIED);
     }
 
-    private void sendEventToKafka(XMessage xmsg) {
+    private void sendEventToKafka(XMessage xmsg, Context currentContext) {
         String xmessage = null;
         try {
             xmessage = xmsg.toXML();
         } catch (JAXBException e) {
-            kafkaProducer.send(topicFailure, inboundMessage.toString());
+            kafkaProducer.send(topicFailure, inboundMessage.toString(), currentContext);
         }
 
         if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
-            kafkaProducer.send(topicSuccess, xmessage);
+            kafkaProducer.send(topicSuccess, xmessage, currentContext);
         } else {
-            kafkaProducer.send(topicReport, xmessage);
+            kafkaProducer.send(topicReport, xmessage, currentContext);
         }
 
     }
     
-    private void sendEventToOutboundKafka(XMessage xmsg) {
+    private void sendEventToOutboundKafka(XMessage xmsg, Context currentContext) {
         String xmessage = null;
         try {
             xmessage = xmsg.toXML();
@@ -300,7 +302,7 @@ public class XMsgProcessingUtil {
         } catch (JAXBException e) {
 //            kafkaProducer.send(topicFailure, inboundMessage.toString());
         }
-        kafkaProducer.send(topicOutbound, xmessage);
+        kafkaProducer.send(topicOutbound, xmessage, currentContext);
     }
 
     private Mono<XMessageDAO> getLatestXMessage(String userID, XMessage.MessageState messageState) {

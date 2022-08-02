@@ -12,7 +12,9 @@ import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.utils.cdn.FileCdnFactory;
 import com.uci.utils.cdn.samagra.MinioClientService;
+import com.uci.utils.kafka.RecordProducer;
 import com.uci.utils.kafka.SimpleProducer;
+import io.opentelemetry.api.trace.Tracer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -42,7 +44,10 @@ public class GupShupWhatsappConverter {
     private GupShupWhatsappAdapter gupShupWhatsappAdapter;
 
     @Autowired
-    public SimpleProducer kafkaProducer;
+    public RecordProducer kafkaProducer;
+
+    @Autowired
+    public Tracer tracer;
 
     @Autowired
     public XMessageRepository xmsgRepository;
