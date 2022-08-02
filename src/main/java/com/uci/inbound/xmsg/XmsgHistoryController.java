@@ -272,6 +272,7 @@ public class XmsgHistoryController {
         xMessageDAOListNew.forEach(xMessageDAO -> {
             Map<String, Object> daoMap = new HashMap<>();
             daoMap.put("id", xMessageDAO.getId());
+            daoMap.put("messageId", xMessageDAO.getMessageId());
             daoMap.put("messageState", xMessageDAO.getMessageState());
             daoMap.put("channel", xMessageDAO.getChannel());
             daoMap.put("provider", xMessageDAO.getProvider());
