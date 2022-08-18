@@ -306,12 +306,18 @@ public class XmsgHistoryController {
                     }
                     daoMap.put("payload", payloadMap);
                     daoMap.put("sentTimestamp", sentMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("sentTimestamp", null);
                 }
                 if(deliverdMap.get(xMessageDAO.getMessageId()) != null) {
                     daoMap.put("deliveryTimestamp", deliverdMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("deliveryTimestamp", null);
                 }
                 if(readMap.get(xMessageDAO.getMessageId()) != null) {
                     daoMap.put("readTimestamp", readMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("readTimestamp", null);
                 }
             } catch (Exception ex) {
                 log.error("Exception when fetching payload: "+ex.getMessage());
