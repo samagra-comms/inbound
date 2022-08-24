@@ -281,7 +281,7 @@ public class XmsgHistoryController {
             daoMap.put("sessionId", xMessageDAO.getSessionId());
             daoMap.put("botUuid", xMessageDAO.getBotUuid());
 //            daoMap.put("xMessage", xMessageDAO.getXMessage());
-            daoMap.put("timestamp", xMessageDAO.getTimestamp());
+//            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try{
                 if(sentMap.get(xMessageDAO.getMessageId()) != null) {
                     String xMessage = sentMap.get(xMessageDAO.getMessageId()).getXMessage();
@@ -303,6 +303,19 @@ public class XmsgHistoryController {
                         payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
                     }
                     daoMap.put("payload", payloadMap);
+                    daoMap.put("sentTimestamp", sentMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("sentTimestamp", null);
+                }
+                if(deliverdMap.get(xMessageDAO.getMessageId()) != null) {
+                    daoMap.put("deliveryTimestamp", deliverdMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("deliveryTimestamp", null);
+                }
+                if(readMap.get(xMessageDAO.getMessageId()) != null) {
+                    daoMap.put("readTimestamp", readMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                } else {
+                    daoMap.put("readTimestamp", null);
                 }
             } catch (Exception ex) {
                 log.error("Exception when fetching payload: "+ex.getMessage());
