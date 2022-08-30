@@ -50,24 +50,26 @@ public class XmsgHistoryController {
         READ;
     }
 
+    /**
+     * User History
+     * @param userId
+     * @param startDate
+     * @param endDate
+     * @param provider
+     * @param tag
+     * @return
+     */
     @RequestMapping(value = "/history", method = RequestMethod.GET, produces = {"application/json", "text/json"})
-    public Mono<Object> getHistory(@RequestParam(value = "botId", required = false) String botId,
-                                      @RequestParam(value = "userId", required = false) String userId,
+    public Mono<Object> getHistory(@RequestParam(value = "userId") String userId,
                                       @RequestParam("startDate") String startDate,
                                       @RequestParam("endDate") String endDate,
-                                      @RequestParam(value = "provider", defaultValue = "firebase") String provider,
-                                      @RequestParam(value = "msgId", required = false) String msgId) {
+                                      @RequestParam(value = "provider") String provider,
+                                      @RequestParam(value = "tag", required = false) String tag) {
         try {
             HttpApiResponse response = HttpApiResponse.builder()
                     .status(HttpStatus.OK.value())
                     .path("/xmsg/history")
                     .build();
-            if (botId == null && userId == null) {
-                response.setStatus(HttpStatus.BAD_REQUEST.value());
-                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
-                response.setMessage("Bot id/user id required.");
-                return Mono.just(response);
-            }
 
             Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 1000),
                     null
@@ -82,74 +84,44 @@ public class XmsgHistoryController {
             endTimestamp.setMinutes(59);
             endTimestamp.setSeconds(59);
 
-            if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
-                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                            @Override
-                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                Map<String, Object> result = new HashMap<>();
-                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
-                                result.put("total", xMessageDAOListNew.size());
-                                result.put("records", xMessageDAOListNew);
-                                response.setResult(result);
-                                return response;
-                            }
-                        });
-            } else if (botId != null && !botId.isEmpty()) {
-                return botService.getBotNodeFromId(botId)
-                        .doOnError(s -> log.info(s.getMessage()))
-                        .map(new Function<JsonNode, Mono<Object>>() {
-                            @Override
-                            public Mono<Object> apply(JsonNode campaignDetails) {
-                                ObjectMapper mapper = new ObjectMapper();
-
-                                String botName = campaignDetails.path("name").asText();
-
-                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
-                                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                                            @Override
-                                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                                Map<String, Object> result = new HashMap<>();
-                                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
-                                                result.put("total", xMessageDAOListNew.size());
-                                                result.put("records", xMessageDAOListNew);
-                                                response.setResult(result);
-                                                return response;
-                                            }
-                                        });
-                            }
-                        }).flatMap(new Function<Mono<Object>, Mono<? extends Object>>() {
-                            @Override
-                            public Mono<? extends Object> apply(Mono<Object> objectFlux) {
-                                return objectFlux;
-                            }
-                        });
-
-            }
+            return findUserQuery(paging, userId, startTimestamp, endTimestamp, provider.toLowerCase(), tag)
+                    .map(new Function<Slice<XMessageDAO>, Object>() {
+                        @Override
+                        public Object apply(Slice<XMessageDAO> xMessageDAOS) {
+                            Map<String, Object> result = new HashMap<>();
+                            List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                            result.put("total", xMessageDAOListNew.size());
+                            result.put("records", xMessageDAOListNew);
+                            response.setResult(result);
+                            return response;
+                        }
+                    });
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
     }
 
+    /**
+     * Bot History Dump
+     * @param botId
+     * @param startDate
+     * @param endDate
+     * @param provider
+     * @param tag
+     * @return
+     */
     @RequestMapping(value = "/history/dump", method = RequestMethod.GET, produces = {"application/json", "text/json"})
-    public Object getHistoryDump(@RequestParam(value = "botId", required = false) String botId,
-                                      @RequestParam(value = "userId", required = false) String userId,
+    public Object getHistoryDump(@RequestParam(value = "botId") String botId,
                                       @RequestParam("startDate") String startDate,
                                       @RequestParam("endDate") String endDate,
-                                      @RequestParam(value = "provider", defaultValue = "firebase") String provider,
-                                      @RequestParam(value = "msgId", required = false) String msgId) {
+                                      @RequestParam(value = "provider") String provider,
+                                      @RequestParam(value = "tag", required = false) String tag) {
         try {
             HttpApiResponse response = HttpApiResponse.builder()
                     .status(HttpStatus.OK.value())
                     .path("/xmsg/history/dump")
                     .build();
-            if (botId == null && userId == null) {
-                response.setStatus(HttpStatus.BAD_REQUEST.value());
-                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
-                response.setMessage("Bot id/user id required.");
-                return Mono.just(response);
-            }
 
             Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 10000000),
                     null
@@ -172,49 +144,67 @@ public class XmsgHistoryController {
                 return Mono.just(response);
             }
 
-            if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
-                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                            @Override
-                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                Map<String, Object> result = new HashMap<>();
-                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
-                                result.put("total", xMessageDAOListNew.size());
-                                result.put("records", xMessageDAOListNew);
-                                response.setResult(result);
-                                return response;
-                            }
-                        });
-            } else if (botId != null && !botId.isEmpty()) {
-                return botService.getBotNodeFromId(botId)
-                        .doOnError(s -> log.info(s.getMessage()))
-                        .map(new Function<JsonNode, Object>() {
-                            @Override
-                            public Object apply(JsonNode campaignDetails) {
-                                ObjectMapper mapper = new ObjectMapper();
+            return botService.getBotNodeFromId(botId)
+                    .doOnError(s -> log.info(s.getMessage()))
+                    .map(new Function<JsonNode, Object>() {
+                        @Override
+                        public Object apply(JsonNode campaignDetails) {
+                            ObjectMapper mapper = new ObjectMapper();
 
-                                String botName = campaignDetails.path("name").asText();
+                            String botName = campaignDetails.path("name").asText();
 
-                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
-                                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                                            @Override
-                                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                                Map<String, Object> result = new HashMap<>();
-                                                List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
-                                                result.put("total", xMessageDAOListNew.size());
-                                                result.put("records", xMessageDAOListNew);
-                                                response.setResult(result);
-                                                return response;
-                                            }
-                                        });
-                            }
-                        });
-
-            }
+                            return findBotQuery(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase(), tag)
+                                    .map(new Function<Slice<XMessageDAO>, Object>() {
+                                        @Override
+                                        public Object apply(Slice<XMessageDAO> xMessageDAOS) {
+                                            Map<String, Object> result = new HashMap<>();
+                                            List<Map<String, Object>> xMessageDAOListNew = filterMessageState(xMessageDAOS.getContent());
+                                            result.put("total", xMessageDAOListNew.size());
+                                            result.put("records", xMessageDAOListNew);
+                                            response.setResult(result);
+                                            return response;
+                                        }
+                                    });
+                        }
+                    });
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Find query for user history api - by params
+     * @param paging
+     * @param userId
+     * @param startTimestamp
+     * @param endTimestamp
+     * @param provider
+     * @param tag
+     * @return
+     */
+    public Mono<Slice<XMessageDAO>> findUserQuery(Pageable paging, String userId, Timestamp startTimestamp, Timestamp endTimestamp, String provider, String tag) {
+        if(tag != null && !tag.isEmpty()) {
+            return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProviderAndTagsContains(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase(), tag);
+        }
+        return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase());
+    }
+
+    /**
+     * Find query for bot history api - by params
+     * @param paging
+     * @param botName
+     * @param startTimestamp
+     * @param endTimestamp
+     * @param provider
+     * @param tag
+     * @return
+     */
+    public Mono<Slice<XMessageDAO>> findBotQuery(Pageable paging, String botName, Timestamp startTimestamp, Timestamp endTimestamp, String provider, String tag) {
+        if(tag != null && !tag.isEmpty()) {
+            return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProviderAndTagsContains(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase(), tag);
+        }
+        return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase());
     }
 
     /**
@@ -233,6 +223,11 @@ public class XmsgHistoryController {
         return r.toString();
     }
 
+    /**
+     * Filter XMessages by state for user/bot history
+     * @param xMessageDAOList
+     * @return
+     */
     public List<Map<String, Object>> filterMessageState(List<XMessageDAO> xMessageDAOList) {
 
         Set<String> messageIdSet = new HashSet<>();
@@ -280,6 +275,7 @@ public class XmsgHistoryController {
             daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
             daoMap.put("sessionId", xMessageDAO.getSessionId());
             daoMap.put("botUuid", xMessageDAO.getBotUuid());
+            daoMap.put("tags", xMessageDAO.getTags());
 //            daoMap.put("xMessage", xMessageDAO.getXMessage());
 //            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try{

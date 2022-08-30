@@ -52,7 +52,7 @@ public class Campaign {
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public void startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
         botService.getBotNodeFromId(campaignId).subscribe(data -> {
-                SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("7597185708").deviceType(DeviceType.PHONE).build();
+                SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).build();
                 SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
                 MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
                 XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
@@ -82,6 +82,7 @@ public class Campaign {
                         .providerURI(adapter.path("provider").asText())
                         .channelURI(adapter.path("channel").asText())
                         .timestamp(timestamp.getTime())
+                        .tags(BotUtil.getBotNodeTags(data))
                         .build();
 
                 XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);

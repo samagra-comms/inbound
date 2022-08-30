@@ -79,7 +79,8 @@ public class XMsgProcessingUtil {
                                                 log.info("Process bot message");
                                                 processBotMessage(xmsg, result.get("appName").toString(),
                                                         result.get("sessionId"), result.get("ownerOrgId"),
-                                                        result.get("ownerId"), result.get("adapterId"), result.get("botUuid"));
+                                                        result.get("ownerId"), result.get("adapterId"), result.get("botUuid"),
+                                                        result.get("tags"));
                                             } else {
                                                 /* Bot is not valid */
                                                 /**
@@ -99,7 +100,8 @@ public class XMsgProcessingUtil {
                                                                         log.info("Process bot message after validation.");
                                                                         processBotMessage(xmsg, res.get("appName").toString(),
                                                                                 res.get("sessionId"), res.get("ownerOrgId"),
-                                                                                res.get("ownerId"), res.get("adapterId"), res.get("botUuid"));
+                                                                                res.get("ownerId"), res.get("adapterId"), res.get("botUuid"),
+                                                                                res.get("tags"));
                                                                     } else {
                                                                         log.info("Bot is invalid after validation");
                                                                         processInvalidBotMessage(xmsg, (ObjectNode) res.get("botNode"), res.get("errorMsg").toString());
@@ -135,6 +137,7 @@ public class XMsgProcessingUtil {
                                                 xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
                                                 xmsg.setOwnerId(xMessageLast.getOwnerId());
                                                 xmsg.setBotId(xMessageLast.getBotUuid());
+                                                xmsg.setTags(xMessageLast.getTags());
                                                 XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
                                                 xMsgRepo.insert(currentMessageToBeInserted)
                                                         .doOnError(genericError("Error in inserting current message"))
@@ -177,6 +180,7 @@ public class XMsgProcessingUtil {
             xmsg.setOwnerOrgId(BotUtil.getBotNodeData(botNode, "ownerOrgID"));
             xmsg.setSessionId(BotUtil.newConversationSessionId());
             xmsg.setAdapterId(BotUtil.getBotNodeAdapterId(botNode));
+            xmsg.setTags(BotUtil.getBotNodeTags(botNode));
         }
 
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
@@ -202,7 +206,9 @@ public class XMsgProcessingUtil {
      * @param xmsg
      * @param appName
      */
-    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId, Object ownerId, Object adapterId, Object botUuid) {
+    private void processBotMessage(XMessage xmsg, String appName, Object sessionId, Object ownerOrgId,
+                                   Object ownerId, Object adapterId, Object botUuid,
+                                   Object tags) {
     	xmsg.setApp(appName);
         if(sessionId != null && !sessionId.toString().isEmpty()) {
             xmsg.setSessionId(UUID.fromString(sessionId.toString()));
@@ -218,6 +224,13 @@ public class XMsgProcessingUtil {
         }
 	    if(botUuid != null && !botUuid.toString().isEmpty()) {
             xmsg.setBotId(UUID.fromString(botUuid.toString()));
+        }
+        if(tags != null) {
+            try{
+                xmsg.setTags((List<String>) tags);
+            } catch(Exception ex) {
+                log.error("Exception in processBotMessage while converting tags: "+ex.getMessage());
+            }
         }
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
@@ -282,6 +295,7 @@ public class XMsgProcessingUtil {
                                     dataMap.put("ownerId", BotUtil.getBotNodeData(botNode, "ownerID"));
                                     dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
 				                    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode, "id"));
+                                    dataMap.put("tags", BotUtil.getBotNodeTags(botNode));
                                     return Mono.just(dataMap);
                                 }
                         	} else {
@@ -545,6 +559,7 @@ public class XMsgProcessingUtil {
         dataMap.put("ownerOrgId", getXMessageOwnerOrgId(xMessageLast));
         dataMap.put("ownerId", getXMessageOwnerId(xMessageLast));
         dataMap.put("botUuid", getXMessageBotUuid(xMessageLast));
+        dataMap.put("tags", getXMessageTags(xMessageLast));
 
         return dataMap;
     }
@@ -565,7 +580,8 @@ public class XMsgProcessingUtil {
         dataMap.put("ownerId", BotUtil.getBotNodeData(botNode,"ownerID"));
         dataMap.put("adapterId", BotUtil.getBotNodeAdapterId(botNode));
 	    dataMap.put("botUuid", BotUtil.getBotNodeData(botNode,"id"));
-	    return dataMap;
+        dataMap.put("tags", BotUtil.getBotNodeTags(botNode));
+        return dataMap;
     }
 
     /**
@@ -611,5 +627,14 @@ public class XMsgProcessingUtil {
      */
     private String getXMessageOwnerOrgId(XMessageDAO xMessageDAO) {
         return xMessageDAO.getOwnerOrgId() != null ? xMessageDAO.getOwnerOrgId() : "";
+    }
+
+    /**
+     * Get Owner UUID as string from XMessage Dao
+     * @param xMessageDAO
+     * @return
+     */
+    private List<String> getXMessageTags(XMessageDAO xMessageDAO) {
+        return xMessageDAO.getTags() != null ? xMessageDAO.getTags() : null;
     }
 }
