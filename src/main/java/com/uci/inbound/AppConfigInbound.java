@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.uci.utils.CampaignService;
 import io.fusionauth.client.FusionAuthClient;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
@@ -51,8 +52,8 @@ public class AppConfigInbound {
         configuration.put(org.springframework.kafka.support.serializer.JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
         configuration.put(ProducerConfig.CLIENT_ID_CONFIG, "sample-producer");
         configuration.put(ProducerConfig.ACKS_CONFIG, "all");
-        configuration.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, org.springframework.kafka.support.serializer.JsonSerializer.class);
-        configuration.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, org.springframework.kafka.support.serializer.JsonSerializer.class);
+        configuration.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configuration.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         
         return configuration;
     }
@@ -66,7 +67,7 @@ public class AppConfigInbound {
     @Bean
     KafkaTemplate<String, String> kafkaTemplate() {
     	KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(producerFactory());
-    	return (KafkaTemplate<String, String>) kafkaTemplate;
+    	return kafkaTemplate;
     }
 
     @Autowired
