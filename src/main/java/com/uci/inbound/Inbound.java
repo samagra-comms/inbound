@@ -10,8 +10,6 @@ import org.springframework.context.annotation.PropertySources;
 import org.springframework.data.cassandra.repository.config.EnableReactiveCassandraRepositories;
 import org.springframework.kafka.annotation.EnableKafka;
 
-import com.uci.dao.service.HealthService;
-
 @EnableKafka
 @EnableReactiveCassandraRepositories("com.uci.dao")
 @EntityScan("com.uci.dao")
@@ -24,7 +22,7 @@ import com.uci.dao.service.HealthService;
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.uci.inbound", "com.uci.adapter", "com.uci.utils"})
 public class Inbound {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         SpringApplication.run(Inbound.class, args);
     }
 }
