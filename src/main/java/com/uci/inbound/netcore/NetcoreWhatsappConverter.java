@@ -3,6 +3,7 @@ package com.uci.inbound.netcore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uci.adapter.netcore.whatsapp.inbound.NetcoreMessageFormat;
 import com.uci.adapter.netcore.whatsapp.NetcoreWhatsappAdapter;
+import com.uci.adapter.service.media.SunbirdCloudMediaService;
 import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
@@ -63,8 +64,24 @@ public class NetcoreWhatsappConverter {
     @Autowired
     public MediaSizeLimit mediaSizeLimit;
 
+    @Value("${sunbird.cloud.media.storage.type}")
+    private String mediaStorageType;
+
+    @Value("${sunbird.cloud.media.storage.key}")
+    private String mediaStorageKey;
+
+    @Value("${sunbird.cloud.media.storage.secret}")
+    private String mediaStorageSecret;
+
+    @Value("${sunbird.cloud.media.storage.url}")
+    private String mediaStorageUrl;
+
+    @Value("${sunbird.cloud.media.storage.container}")
+    private String mediaStorageContainer;
+
     @RequestMapping(value = "/whatsApp", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void netcoreWhatsApp(@RequestBody NetcoreMessageFormat message) throws JsonProcessingException, JAXBException {
+        SunbirdCloudMediaService mediaService = new SunbirdCloudMediaService(mediaStorageType, mediaStorageKey, mediaStorageSecret, mediaStorageUrl, mediaStorageContainer);
 
         System.out.println(message.toString());
 
@@ -72,6 +89,7 @@ public class NetcoreWhatsappConverter {
                 .botservice(botService)
                 .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
                 .mediaSizeLimit(mediaSizeLimit)
+                .mediaService(mediaService)
                 .build();
         try {
             XMsgProcessingUtil.builder()
