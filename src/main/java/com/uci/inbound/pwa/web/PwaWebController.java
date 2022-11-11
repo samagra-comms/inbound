@@ -2,13 +2,13 @@ package com.uci.inbound.pwa.web;
  
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uci.adapter.cdn.FileCdnFactory;
 import com.uci.adapter.pwa.PwaWebPortalAdapter;
 import com.uci.adapter.pwa.web.inbound.PwaWebMessage;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
 import com.uci.utils.cache.service.RedisCacheService;
-import com.uci.utils.cdn.FileCdnFactory;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
