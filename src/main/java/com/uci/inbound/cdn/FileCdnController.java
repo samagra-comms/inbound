@@ -97,7 +97,7 @@ public class FileCdnController {
 
     @RequestMapping(value = "/azure/getSignedUrl", method = RequestMethod.GET)
     public String getAzureFile() {
-        return azureBlobService.getFileSignedUrl("4229789621234812100-568466840572272579.jpeg");
+        return azureBlobService.getFileSignedUrl("testing-1.jpg");
     }
 
     @RequestMapping(value = "/sunbird/getSignedUrl", method = RequestMethod.GET)
