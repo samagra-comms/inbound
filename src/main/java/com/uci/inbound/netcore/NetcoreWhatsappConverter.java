@@ -47,10 +47,10 @@ public class NetcoreWhatsappConverter {
 
     @Autowired
     public BotService botService;
-    
+
     @Autowired
     public RedisCacheService redisCacheService;
-    
+
     @Value("${outbound}")
     public String outboundTopic;
 
@@ -73,21 +73,26 @@ public class NetcoreWhatsappConverter {
                 .mediaSizeLimit(mediaSizeLimit)
                 .build();
         try {
-            XMsgProcessingUtil.builder()
-                    .adapter(netcoreWhatsappAdapter)
-                    .xMsgRepo(xmsgRepo)
-                    .inboundMessage(message.getMessages()[0])
-                    .topicFailure(inboundError)
-                    .topicSuccess(inboundProcessed)
-                    .kafkaProducer(kafkaProducer)
-                    .botService(botService)
-                    .redisCacheService(redisCacheService)
-                    .topicOutbound(outboundTopic)
-                    .topicReport(topicReport)
-                    .build()
-                    .process();
-        } catch(NullPointerException ex) {
-            log.error("An error occored : "+ex.getMessage());
+            if (message.getMessages()[0].getText() != null &&
+                    message.getMessages()[0].getText().getText().toLowerCase().startsWith("#conf")) {
+                log.info("Received config message : " + message.getMessages()[0].getText().getText());
+            } else {
+                XMsgProcessingUtil.builder()
+                        .adapter(netcoreWhatsappAdapter)
+                        .xMsgRepo(xmsgRepo)
+                        .inboundMessage(message.getMessages()[0])
+                        .topicFailure(inboundError)
+                        .topicSuccess(inboundProcessed)
+                        .kafkaProducer(kafkaProducer)
+                        .botService(botService)
+                        .redisCacheService(redisCacheService)
+                        .topicOutbound(outboundTopic)
+                        .topicReport(topicReport)
+                        .build()
+                        .process();
+            }
+        } catch (NullPointerException ex) {
+            log.error("An error occored : " + ex.getMessage());
         }
 
     }
