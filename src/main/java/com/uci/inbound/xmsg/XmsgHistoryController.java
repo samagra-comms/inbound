@@ -106,7 +106,7 @@ public class XmsgHistoryController {
 
                                 String botName = campaignDetails.path("name").asText();
 
-                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
+                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider)
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
@@ -174,7 +174,7 @@ public class XmsgHistoryController {
             }
 
             if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider.toLowerCase())
+                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider)
                         .map(new Function<Slice<XMessageDAO>, Object>() {
                             @Override
                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
@@ -197,7 +197,7 @@ public class XmsgHistoryController {
 
                                 String botName = campaignDetails.path("name").asText();
 
-                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider.toLowerCase())
+                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider)
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
