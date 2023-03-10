@@ -413,47 +413,9 @@ public class XmsgHistoryController {
 
 
     public List<Map<String, Object>> filterConversationHistory(List<XMessageDAO> xMessageDAOList) {
-
-        Set<String> messageIdSet = new HashSet<>();
-        Map<String, XMessageDAO> sentMap = new HashMap<>();
-//        Map<String, XMessageDAO> deliverdMap = new HashMap<>();
-//        Map<String, XMessageDAO> readMap = new HashMap<>();
-        Map<String, XMessageDAO> repliedMap = new HashMap<>();
-
-        xMessageDAOList.forEach(xMessageDAO -> {
-            messageIdSet.add(xMessageDAO.getMessageId());
-            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.SENT.name())) {
-                sentMap.put(xMessageDAO.getMessageId(), xMessageDAO);
-            }
-//            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.DELIVERED.name())) {
-//                deliverdMap.put(xMessageDAO.getMessageId(), xMessageDAO);
-//            }
-//            if (xMessageDAO.getMessageState().equalsIgnoreCase(MessageState.READ.name())) {
-//                readMap.put(xMessageDAO.getMessageId(), xMessageDAO);
-//            }
-            if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.REPLIED.name())) {
-                repliedMap.put(xMessageDAO.getMessageId(), xMessageDAO);
-            }
-        });
-
-        List<XMessageDAO> xMessageDAOListNew = new ArrayList<>();
-        /* Add message receipts with highest message state only in order READ->DELIVERED->SENT, given READ is highest order */
-        messageIdSet.forEach(messageId -> {
-//            if (readMap != null && readMap.containsKey(messageId)) {
-//                xMessageDAOListNew.add(readMap.get(messageId));
-//            } else if (deliverdMap != null && deliverdMap.containsKey(messageId)) {
-//                xMessageDAOListNew.add(deliverdMap.get(messageId));
-//            } else
-            if (sentMap != null && sentMap.containsKey(messageId)) {
-                xMessageDAOListNew.add(sentMap.get(messageId));
-            } else if (repliedMap != null && repliedMap.containsKey(messageId)) {
-                xMessageDAOListNew.add(repliedMap.get(messageId));
-            }
-        });
-        /* Sort by timestamp in descending order */
         List<Map<String, Object>> list = new ArrayList<>();
-        xMessageDAOListNew.sort(Comparator.comparing(XMessageDAO::getTimestamp).reversed());
-        xMessageDAOListNew.forEach(xMessageDAO -> {
+//        xMessageDAOList.sort(Comparator.comparing(XMessageDAO::getTimestamp).reversed());
+        xMessageDAOList.forEach(xMessageDAO -> {
             Map<String, Object> daoMap = new HashMap<>();
             daoMap.put("id", xMessageDAO.getId());
             daoMap.put("messageId", xMessageDAO.getMessageId());
@@ -469,51 +431,33 @@ public class XmsgHistoryController {
 //            map.put("xMessage", xMessageDAO.getXMessage());
 //            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try {
-                if (sentMap.get(xMessageDAO.getMessageId()) != null) {
-                    String xMessage = sentMap.get(xMessageDAO.getMessageId()).getXMessage();
-                    XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
-                    Map<String, Object> payloadMap = new HashMap<>();
-                    if (currentXmsg.getPayload().getText() != null) {
-                        payloadMap.put("text", currentXmsg.getPayload().getText());
-                    }
-                    if (currentXmsg.getPayload().getMedia() != null) {
-                        payloadMap.put("media", currentXmsg.getPayload().getMedia());
-                    }
-                    if (currentXmsg.getPayload().getButtonChoices() != null) {
-                        payloadMap.put("buttonChoices", currentXmsg.getPayload().getButtonChoices());
-                    }
-                    if (currentXmsg.getPayload().getLocation() != null) {
-                        payloadMap.put("location", currentXmsg.getPayload().getLocation());
-                    }
-                    if (currentXmsg.getPayload().getContactCard() != null) {
-                        payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
-                    }
-                    daoMap.put("payload", payloadMap);
-                    daoMap.put("sentTimestamp", sentMap.get(xMessageDAO.getMessageId()).getTimestamp());
-                } else {
-                    daoMap.put("sentTimestamp", null);
+
+                String xMessage = xMessageDAO.getXMessage();
+                XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
+                Map<String, Object> payloadMap = new HashMap<>();
+                if (currentXmsg.getPayload().getText() != null) {
+                    payloadMap.put("text", currentXmsg.getPayload().getText());
                 }
-                if (repliedMap.get(xMessageDAO.getMessageId()) != null) {
-                    String xMessage = repliedMap.get(xMessageDAO.getMessageId()).getXMessage();
-                    XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
-                    Map<String, Object> payloadMap = new HashMap<>();
-                    if (currentXmsg.getPayload().getText() != null) {
-                        payloadMap.put("text", currentXmsg.getPayload().getText());
-                    }
-                    if (currentXmsg.getPayload().getMedia() != null) {
-                        payloadMap.put("media", currentXmsg.getPayload().getMedia());
-                    }
-                    if (currentXmsg.getPayload().getButtonChoices() != null) {
-                        payloadMap.put("buttonChoices", currentXmsg.getPayload().getButtonChoices());
-                    }
-                    if (currentXmsg.getPayload().getLocation() != null) {
-                        payloadMap.put("location", currentXmsg.getPayload().getLocation());
-                    }
-                    if (currentXmsg.getPayload().getContactCard() != null) {
-                        payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
-                    }
-                    daoMap.put("payload", payloadMap);
-                    daoMap.put("repliedTimestamp", repliedMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                if (currentXmsg.getPayload().getMedia() != null) {
+                    payloadMap.put("media", currentXmsg.getPayload().getMedia());
+                }
+                if (currentXmsg.getPayload().getButtonChoices() != null) {
+                    payloadMap.put("buttonChoices", currentXmsg.getPayload().getButtonChoices());
+                }
+                if (currentXmsg.getPayload().getLocation() != null) {
+                    payloadMap.put("location", currentXmsg.getPayload().getLocation());
+                }
+                if (currentXmsg.getPayload().getContactCard() != null) {
+                    payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
+                }
+                daoMap.put("payload", payloadMap);
+                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.SENT.name())) {
+                    daoMap.put("sentTimestamp", xMessageDAO.getTimestamp());
+                } else {
+                    daoMap.put("repliedTimestamp", null);
+                }
+                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.REPLIED.name())) {
+                    daoMap.put("repliedTimestamp", xMessageDAO.getTimestamp());
                 } else {
                     daoMap.put("repliedTimestamp", null);
                 }
