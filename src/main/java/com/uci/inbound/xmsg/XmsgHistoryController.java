@@ -220,8 +220,8 @@ public class XmsgHistoryController {
     }
 
     @RequestMapping(value = "/conversation-history", method = RequestMethod.GET, produces = {"application/json", "text/json"})
-    public Mono<Object> getConversationHistory(@RequestParam(value = "botId", required = false) String botId,
-                                               @RequestParam(value = "userId", required = false) String userId,
+    public Mono<Object> getConversationHistory(@RequestParam(value = "botId", required = true) String botId,
+                                               @RequestParam(value = "userId", required = true) String userId,
                                                @RequestParam("startDate") String startDate,
                                                @RequestParam("endDate") String endDate,
                                                @RequestParam(value = "provider", defaultValue = "firebase") String provider,
@@ -231,10 +231,15 @@ public class XmsgHistoryController {
                     .status(HttpStatus.OK.value())
                     .path("/xmsg/history")
                     .build();
-            if (botId == null && userId == null) {
+            if (botId == null || botId.isEmpty()) {
                 response.setStatus(HttpStatus.BAD_REQUEST.value());
                 response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
-                response.setMessage("Bot id/user id required.");
+                response.setMessage("Bot id required.");
+                return Mono.just(response);
+            } else if (userId == null || userId.isEmpty()) {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+                response.setMessage("User id required.");
                 return Mono.just(response);
             }
 
@@ -251,20 +256,7 @@ public class XmsgHistoryController {
             endTimestamp.setMinutes(59);
             endTimestamp.setSeconds(59);
 
-            if (userId != null && !userId.isEmpty()) {
-                return xMsgRepo.findAllByUserIdInAndFromIdInAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), startTimestamp, endTimestamp, provider)
-                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                            @Override
-                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                Map<String, Object> result = new HashMap<>();
-                                List<Map<String, Object>> xMessageDAOListNew = filterConversationHistory(xMessageDAOS.getContent());
-                                result.put("total", xMessageDAOListNew.size());
-                                result.put("records", xMessageDAOListNew);
-                                response.setResult(result);
-                                return response;
-                            }
-                        });
-            } else if (botId != null && !botId.isEmpty()) {
+            if (botId != null && !botId.isEmpty() && userId != null && !userId.isEmpty()) {
                 return campaignService.getCampaignFromID(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Mono<Object>>() {
@@ -275,7 +267,7 @@ public class XmsgHistoryController {
 
                                 String botName = campaignDetails.path("name").asText();
 
-                                return xMsgRepo.findAllByAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, botName, startTimestamp, endTimestamp, provider)
+                                return xMsgRepo.findAllByUserIdInAndFromIdInAndAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), botName, startTimestamp, endTimestamp, provider)
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
                                             public Object apply(Slice<XMessageDAO> xMessageDAOS) {
@@ -295,6 +287,11 @@ public class XmsgHistoryController {
                             }
                         });
 
+            } else {
+                response.setStatus(HttpStatus.BAD_REQUEST.value());
+                response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+                response.setMessage("Invalid Request!");
+                return Mono.just(response);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
