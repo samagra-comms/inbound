@@ -255,12 +255,11 @@ public class XmsgHistoryController {
             endTimestamp.setSeconds(59);
 
             if (botId != null && !botId.isEmpty() && userId != null && !userId.isEmpty()) {
-                return campaignService.getCampaignFromID(botId)
+                return botService.getBotNodeFromId(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Mono<Object>>() {
                             @Override
-                            public Mono<Object> apply(JsonNode jsonNode) {
-                                JsonNode campaignDetails = jsonNode.get("data");
+                            public Mono<Object> apply(JsonNode campaignDetails) {
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
