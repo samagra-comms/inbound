@@ -9,22 +9,19 @@ import com.uci.adapter.provider.factory.ProviderFactory;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.dao.utils.XMessageDAOUtils;
-import com.uci.utils.CampaignService;
+import com.uci.utils.BotService;
+import com.uci.utils.bot.util.BotUtil;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import javax.xml.bind.JAXBException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 @Slf4j
 @CrossOrigin
@@ -41,7 +38,7 @@ public class Campaign {
     private ProviderFactory factoryProvider;
 
     @Autowired
-    private CampaignService campaignService;
+    private BotService botService;
 
     @Autowired
     private XMessageRepository xMsgRepo;
@@ -54,32 +51,28 @@ public class Campaign {
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public void startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-//        kafkaProducer.send(campaign, campaignId);
-//        return;
-        campaignService.getCampaignFromID(campaignId).subscribe(node -> {
-                JsonNode data = node.get("data");
-                SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("7597185708").deviceType(DeviceType.PHONE).build();
+        botService.getBotNodeFromId(campaignId).subscribe(data -> {
+                SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).build();
                 SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
                 MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
-                XMessagePayload payload = new XMessagePayload().builder().text(data.path("startingMessage").asText()).build();
-                JsonNode adapter = data.findValues("logic").get(0).get(0).get("adapter");
-                log.info("adapter:"+adapter+", node:"+node);
+                XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
+                JsonNode adapter = BotUtil.getBotNodeAdapter(data);
+                log.info("adapter:"+adapter+", node:"+data);
                 if(adapter.path("provider").asText().equals("firebase")) {
                     from.setDeviceType(DeviceType.PHONE_FCM);
                 } else if(adapter.path("provider").asText().equals("pwa")) {
                     from.setDeviceType(DeviceType.PHONE_PWA);
                 }
-                String ownerOrgId = data.path("ownerOrgID") != null && !data.path("ownerOrgID").asText().equals("null") ? data.path("ownerOrgID").asText() : null;
-                String ownerId = data.path("ownerID") != null && !data.path("ownerID").asText().equals("null") ? data.path("ownerID").asText() : null;
 
                 Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
                 XMessage xmsg = new XMessage().builder()
-                        .botId(UUID.fromString(data.path("id").asText()))
-                        .app(data.path("name").asText())
-                        .sessionId(newConversationSessionId())
-                        .ownerId(ownerId)
-                        .ownerOrgId(ownerOrgId)
+                        .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
+                        .app(BotUtil.getBotNodeData(data, "name"))
+                        .adapterId(BotUtil.getBotNodeAdapterId(data))
+                        .sessionId(BotUtil.newConversationSessionId())
+                        .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
+                        .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
                         .from(from)
                         .to(to)
                         .messageId(msgId)
@@ -89,6 +82,7 @@ public class Campaign {
                         .providerURI(adapter.path("provider").asText())
                         .channelURI(adapter.path("channel").asText())
                         .timestamp(timestamp.getTime())
+                        .tags(BotUtil.getBotNodeTags(data))
                         .build();
 
                 XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
@@ -99,14 +93,6 @@ public class Campaign {
                         });
             }
         );
-    }
-
-    /**
-     * New Conversation Session UUID
-     * @return
-     */
-    private UUID newConversationSessionId() {
-        return UUID.randomUUID();
     }
 
     private void sendEventToKafka(XMessage xmsg) {

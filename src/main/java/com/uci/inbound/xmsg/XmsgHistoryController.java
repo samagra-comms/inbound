@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
-import com.uci.utils.CampaignService;
+import com.uci.utils.BotService;
 import com.uci.utils.model.HttpApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.XMessage;
@@ -42,7 +42,7 @@ public class XmsgHistoryController {
     private XMessageRepository xMsgRepo;
 
     @Autowired
-    private CampaignService campaignService;
+    private BotService botService;
 
     enum MessageState {
         SENT,
@@ -96,12 +96,11 @@ public class XmsgHistoryController {
                             }
                         });
             } else if (botId != null && !botId.isEmpty()) {
-                return campaignService.getCampaignFromID(botId)
+                return botService.getBotNodeFromId(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Mono<Object>>() {
                             @Override
-                            public Mono<Object> apply(JsonNode jsonNode) {
-                                JsonNode campaignDetails = jsonNode.get("data");
+                            public Mono<Object> apply(JsonNode campaignDetails) {
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
@@ -187,12 +186,11 @@ public class XmsgHistoryController {
                             }
                         });
             } else if (botId != null && !botId.isEmpty()) {
-                return campaignService.getCampaignFromID(botId)
+                return botService.getBotNodeFromId(botId)
                         .doOnError(s -> log.info(s.getMessage()))
                         .map(new Function<JsonNode, Object>() {
                             @Override
-                            public Object apply(JsonNode jsonNode) {
-                                JsonNode campaignDetails = jsonNode.get("data");
+                            public Object apply(JsonNode campaignDetails) {
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
@@ -362,7 +360,8 @@ public class XmsgHistoryController {
             daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
             daoMap.put("sessionId", xMessageDAO.getSessionId());
             daoMap.put("botUuid", xMessageDAO.getBotUuid());
-//            map.put("xMessage", xMessageDAO.getXMessage());
+            daoMap.put("tags", xMessageDAO.getTags());
+//            daoMap.put("xMessage", xMessageDAO.getXMessage());
 //            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try {
                 if (sentMap.get(xMessageDAO.getMessageId()) != null) {
@@ -425,7 +424,8 @@ public class XmsgHistoryController {
             daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
             daoMap.put("sessionId", xMessageDAO.getSessionId());
             daoMap.put("botUuid", xMessageDAO.getBotUuid());
-//            map.put("xMessage", xMessageDAO.getXMessage());
+		daoMap.put("tags", xMessageDAO.getTags());
+//            daoMap.put("xMessage", xMessageDAO.getXMessage());
 //            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try {
 
