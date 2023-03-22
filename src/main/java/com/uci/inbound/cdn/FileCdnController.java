@@ -54,7 +54,7 @@ public class FileCdnController {
                                     result = mapper.createObjectNode();
                                     result.put("url", signedUrl);
                                     result.put("mimeType", mimeType);
-                                    result.put("fileName", minioFileName);
+                                    result.put("fileName", name);
                                     return ResponseEntity.ok(result);
                                 } else {
                                     result = mapper.createObjectNode();
