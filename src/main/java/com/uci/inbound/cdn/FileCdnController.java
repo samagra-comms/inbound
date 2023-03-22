@@ -49,7 +49,8 @@ public class FileCdnController {
                             String filePath = FileUtil.fileToLocalFromBytes(inputBytes, mimeType, name);
                             String minioFileName = minioClientService.uploadFileFromPath(filePath, name);
                             if (minioFileName != null) {
-                                String signedUrl = minioClientService.getFileSignedUrl(minioFileName);
+//                                String signedUrl = minioClientService.getFileSignedUrl(minioFileName);
+                                String signedUrl = minioClientService.getFileSignedUrl(name);
                                 if (signedUrl != null) {
                                     result = mapper.createObjectNode();
                                     result.put("url", signedUrl);
