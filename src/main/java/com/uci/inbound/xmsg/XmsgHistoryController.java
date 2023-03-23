@@ -225,6 +225,14 @@ public class XmsgHistoryController {
                                                @RequestParam(value = "provider", defaultValue = "firebase") String provider,
                                                @RequestParam(value = "msgId", required = false) String msgId) {
         try {
+            String request = "botId : " + botId +
+                    ", userId: " + userId +
+                    ", startDate: " + startDate +
+                    ", endDate: " + endDate +
+                    ", provider: " + provider +
+                    ", msgId:" + msgId;
+
+            log.info("/conversation-history api call... Request: {" + request + "}");
             HttpApiResponse response = HttpApiResponse.builder()
                     .status(HttpStatus.OK.value())
                     .path("/xmsg/history")
@@ -263,7 +271,11 @@ public class XmsgHistoryController {
                                 ObjectMapper mapper = new ObjectMapper();
 
                                 String botName = campaignDetails.path("name").asText();
-
+                                log.info("Bot Name : " + botName);
+//                                String localUserId = userId;
+//                                if (!userId.toLowerCase().startsWith("phone:")) {
+//                                    localUserId = userId.replaceAll("phone:", "");
+//                                }
                                 return xMsgRepo.findAllByUserIdInAndFromIdInAndAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), botName, startTimestamp, endTimestamp, provider)
                                         .map(new Function<Slice<XMessageDAO>, Object>() {
                                             @Override
@@ -272,6 +284,7 @@ public class XmsgHistoryController {
                                                 List<Map<String, Object>> xMessageDAOListNew = filterConversationHistory(xMessageDAOS.getContent());
                                                 result.put("total", xMessageDAOListNew.size());
                                                 result.put("records", xMessageDAOListNew);
+                                                log.info("Response :" + result);
                                                 response.setResult(result);
                                                 return response;
                                             }
@@ -423,7 +436,7 @@ public class XmsgHistoryController {
             daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
             daoMap.put("sessionId", xMessageDAO.getSessionId());
             daoMap.put("botUuid", xMessageDAO.getBotUuid());
-		daoMap.put("tags", xMessageDAO.getTags());
+            daoMap.put("tags", xMessageDAO.getTags());
 //            daoMap.put("xMessage", xMessageDAO.getXMessage());
 //            daoMap.put("timestamp", xMessageDAO.getTimestamp());
             try {
