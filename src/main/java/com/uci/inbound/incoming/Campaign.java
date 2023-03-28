@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.xml.bind.JAXBException;
@@ -50,49 +52,50 @@ public class Campaign {
     String topicFailure;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public void startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
+    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
         botService.getBotNodeFromId(campaignId).subscribe(data -> {
-                SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).build();
-                SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
-                MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
-                XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
-                JsonNode adapter = BotUtil.getBotNodeAdapter(data);
-                log.info("adapter:"+adapter+", node:"+data);
-                if(adapter.path("provider").asText().equals("firebase")) {
-                    from.setDeviceType(DeviceType.PHONE_FCM);
-                } else if(adapter.path("provider").asText().equals("pwa")) {
-                    from.setDeviceType(DeviceType.PHONE_PWA);
+                    SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).build();
+                    SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
+                    MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
+                    XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
+                    JsonNode adapter = BotUtil.getBotNodeAdapter(data);
+                    log.info("adapter:" + adapter + ", node:" + data);
+                    if (adapter.path("provider").asText().equals("firebase")) {
+                        from.setDeviceType(DeviceType.PHONE_FCM);
+                    } else if (adapter.path("provider").asText().equals("pwa")) {
+                        from.setDeviceType(DeviceType.PHONE_PWA);
+                    }
+
+                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+
+                    XMessage xmsg = new XMessage().builder()
+                            .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
+                            .app(BotUtil.getBotNodeData(data, "name"))
+                            .adapterId(BotUtil.getBotNodeAdapterId(data))
+                            .sessionId(BotUtil.newConversationSessionId())
+                            .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
+                            .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
+                            .from(from)
+                            .to(to)
+                            .messageId(msgId)
+                            .messageState(XMessage.MessageState.REPLIED)
+                            .messageType(XMessage.MessageType.TEXT)
+                            .payload(payload)
+                            .providerURI(adapter.path("provider").asText())
+                            .channelURI(adapter.path("channel").asText())
+                            .timestamp(timestamp.getTime())
+                            .tags(BotUtil.getBotNodeTags(data))
+                            .build();
+
+                    XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
+                    xMsgRepo.insert(currentMessageToBeInserted)
+                            .doOnError(genericError("Error in inserting current message"))
+                            .subscribe(xMessageDAO -> {
+                                sendEventToKafka(xmsg);
+                            });
                 }
-
-                Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-
-                XMessage xmsg = new XMessage().builder()
-                        .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
-                        .app(BotUtil.getBotNodeData(data, "name"))
-                        .adapterId(BotUtil.getBotNodeAdapterId(data))
-                        .sessionId(BotUtil.newConversationSessionId())
-                        .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
-                        .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
-                        .from(from)
-                        .to(to)
-                        .messageId(msgId)
-                        .messageState(XMessage.MessageState.REPLIED)
-                        .messageType(XMessage.MessageType.TEXT)
-                        .payload(payload)
-                        .providerURI(adapter.path("provider").asText())
-                        .channelURI(adapter.path("channel").asText())
-                        .timestamp(timestamp.getTime())
-                        .tags(BotUtil.getBotNodeTags(data))
-                        .build();
-
-                XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
-                xMsgRepo.insert(currentMessageToBeInserted)
-                        .doOnError(genericError("Error in inserting current message"))
-                        .subscribe(xMessageDAO -> {
-                            sendEventToKafka(xmsg);
-                        });
-            }
         );
+        return new ResponseEntity<>("Notification Sending", HttpStatus.OK);
     }
 
     private void sendEventToKafka(XMessage xmsg) {

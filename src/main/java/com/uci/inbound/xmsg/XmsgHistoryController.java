@@ -470,6 +470,16 @@ public class XmsgHistoryController {
                 } else {
                     daoMap.put("repliedTimestamp", null);
                 }
+                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.DELIVERED.name())) {
+                    daoMap.put("deliveredTimestamp", xMessageDAO.getTimestamp());
+                } else {
+                    daoMap.put("deliveredTimestamp", null);
+                }
+                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.READ.name())) {
+                    daoMap.put("readTimestamp", xMessageDAO.getTimestamp());
+                } else {
+                    daoMap.put("readTimestamp", null);
+                }
             } catch (Exception ex) {
                 log.error("Exception when fetching payload: " + ex.getMessage());
             }
