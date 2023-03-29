@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="dao" />
+        <module name="adapter" />
+        <module name="inbound" />
+        <module name="utils" />
+        <module name="message-rosa" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="adapter" target="10" />
+      <module name="dao" target="17" />
+      <module name="inbound" target="17" />
+      <module name="message-rosa" target="17" />
+      <module name="utils" target="17" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="adapter" options="-parameters" />
+      <module name="dao" options="-parameters" />
+      <module name="inbound" options="-parameters" />
+      <module name="message-rosa" options="-parameters" />
+      <module name="utils" options="-parameters" />
+    </option>
+  </component>
+</project>
