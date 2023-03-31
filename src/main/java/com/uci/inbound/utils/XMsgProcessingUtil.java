@@ -410,12 +410,14 @@ public class XMsgProcessingUtil {
                                     } else {
                                         // Log it here
                                         log.error("No bot found with this BotId :" + botId);
+                                        return genericError("Error in getting latest xmessage - catch");
 
                                     }
                         }
                     });
             } catch (Exception e) {
             	log.error("Exception in getCampaignFromStartingMessage :"+e.getMessage());
+                return genericError("Error in getting latest xmessage - catch");
             }
         }
         else if (text != null && text.equals("")) {
