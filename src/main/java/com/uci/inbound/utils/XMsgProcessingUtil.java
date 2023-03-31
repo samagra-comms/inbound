@@ -63,13 +63,9 @@ public class XMsgProcessingUtil {
                         * Else if message state is sent, print error message
                         * Else if message state is deliverd/read, send the event to report topic
                         * Else print invalid message error */
-                        // For PWA BotId will be applicationId
-                        String botId = null;
-                        if(inboundMessage.appId != null){
-                            botId = inboundMessage.appId;
-                        }
                         if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
-                            fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom(), botId)
+                            // For PWA BotId will be applicationId
+                            fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom(), xmsg.getApp())
                                     .subscribe(result -> {
                                         log.info("fetchBotData response:" + result);
                                         /** If bot exists & bot name exists, proceed
