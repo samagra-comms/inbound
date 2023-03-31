@@ -69,7 +69,7 @@ public class XMsgProcessingUtil {
                             botId = inboundMessage.appId;
                         }
                         if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
-                            fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom())
+                            fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom(), botId)
                                     .subscribe(result -> {
                                         log.info("fetchBotData response:" + result);
                                         /** If bot exists & bot name exists, proceed
