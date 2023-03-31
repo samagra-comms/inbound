@@ -393,11 +393,11 @@ public class XMsgProcessingUtil {
                         @Override
                         public Mono<Map<String, Object>> apply(JsonNode botNode) {
                             log.info("botNode:"+botNode);
+                                    Map<String, Object> dataMap = new HashMap<>();
                                     if(botNode != null && !botNode.isEmpty()
                                         && botNode.path("name") != null && !botNode.path("name").equals("")) {
                                         String botValid= BotUtil.getBotValidFromJsonNode(botNode);
                                         if(!botValid.equals("true")) {
-                                            Map<String, Object> dataMap = new HashMap<>();
                                             dataMap.put("botExists", "true");
                                             dataMap.put("isBotValid", "false");
                                             dataMap.put("checkIsBotValid", "false");
@@ -410,14 +410,16 @@ public class XMsgProcessingUtil {
                                     } else {
                                         // Log it here
                                         log.error("No bot found with this BotId :" + botId);
-                                        return genericError("Error in getting latest xmessage - catch");
-
+                                        dataMap.put("botExists", "false");
+                                        return Mono.just(dataMap);
                                     }
                         }
                     });
             } catch (Exception e) {
             	log.error("Exception in getCampaignFromStartingMessage :"+e.getMessage());
-                return genericError("Error in getting latest xmessage - catch");
+                Map<String, Object> dataMap = new HashMap<>();
+                dataMap.put("botExists", "false");
+                return Mono.just(dataMap);
             }
         }
         else if (text != null && text.equals("")) {
