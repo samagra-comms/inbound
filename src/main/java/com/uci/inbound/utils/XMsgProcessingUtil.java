@@ -63,6 +63,11 @@ public class XMsgProcessingUtil {
                         * Else if message state is sent, print error message
                         * Else if message state is deliverd/read, send the event to report topic
                         * Else print invalid message error */
+                        // For PWA BotId will be applicationId
+                        String botId = null;
+                        if(inboundMessage.appId != null){
+                            botId = inboundMessage.appId;
+                        }
                         if(xmsg.getMessageState().equals(XMessage.MessageState.REPLIED)) {
                             fetchBotData(xmsg.getPayload().getText(), xmsg.getFrom())
                                     .subscribe(result -> {
@@ -375,16 +380,49 @@ public class XMsgProcessingUtil {
     }
 
     /**
-     * Find bot from starting message/last message,
+     * Find bot from starting message/last message, 
+     * or if the bot is already present in the data return that directly as a Mono.
         * if not found, return error message
         * else return bot data
      * @param text
      * @param from
      * @return
      */
-    private Mono<Map<String, Object>> fetchBotData(String text, SenderReceiverInfo from) {
+    private Mono<Map<String, Object>> fetchBotData(String text, SenderReceiverInfo from, String botId) {
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
-        if (text != null && text.equals("")) {
+        if(botId != null){
+            try{
+                return botService.getBotNodeFromId(botId)
+                    .flatMap(new Function<JsonNode, Mono<? extends Map<String, Object>>>() {
+                        @Override
+                        public Mono<Map<String, Object>> apply(JsonNode botNode) {
+                            log.info("botNode:"+botNode);
+                                    if(botNode != null && !botNode.isEmpty()
+                                        && botNode.path("name") != null && !botNode.path("name").equals("")) {
+                                        String botValid= BotUtil.getBotValidFromJsonNode(botNode);
+                                        if(!botValid.equals("true")) {
+                                            Map<String, Object> dataMap = new HashMap<>();
+                                            dataMap.put("botExists", "true");
+                                            dataMap.put("isBotValid", "false");
+                                            dataMap.put("checkIsBotValid", "false");
+                                            dataMap.put("botNode", botNode);
+                                            dataMap.put("errorMsg", botValid);
+                                            return Mono.just(dataMap);
+                                        } else {
+                                            return Mono.just(createNewConversationData(botNode));
+                                        }
+                                    } else {
+                                        // Log it here
+                                        log.error("No bot found with this BotId :" + botId);
+
+                                    }
+                        }
+                    });
+            } catch (Exception e) {
+            	log.error("Exception in getCampaignFromStartingMessage :"+e.getMessage());
+            }
+        }
+        else if (text != null && text.equals("")) {
             try {
             	return getLatestXMessage(from.getUserID(), yesterday, XMessage.MessageState.SENT.name()).map(new Function<XMessageDAO, Map<String, Object>>() {
                     @Override
