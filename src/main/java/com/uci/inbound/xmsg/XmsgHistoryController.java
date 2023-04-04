@@ -284,7 +284,11 @@ public class XmsgHistoryController {
                                                 List<Map<String, Object>> xMessageDAOListNew = filterConversationHistory(xMessageDAOS.getContent());
                                                 result.put("total", xMessageDAOListNew.size());
                                                 result.put("records", xMessageDAOListNew);
-                                                log.info("Response :" + result);
+                                                if(xMessageDAOListNew.size() < 5){
+                                                    log.info("Response :" + result);
+                                                } else {
+                                                    log.info("Response :" + xMessageDAOListNew.size());
+                                                }
                                                 response.setResult(result);
                                                 return response;
                                             }
