@@ -3,14 +3,11 @@ package com.uci.inbound;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.data.cassandra.repository.config.EnableReactiveCassandraRepositories;
 import org.springframework.kafka.annotation.EnableKafka;
-
-import com.uci.dao.service.HealthService;
 
 @EnableKafka
 @EnableReactiveCassandraRepositories("com.uci.dao")
