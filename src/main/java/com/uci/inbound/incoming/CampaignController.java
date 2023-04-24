@@ -54,9 +54,9 @@ public class CampaignController {
     String topicFailure;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam("page") String page) throws JsonProcessingException, JAXBException {
+    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
         Map<String, String> meta;
-        if(page != null || !page.isEmpty()){
+        if(page != null && !page.isEmpty()){
             meta = new HashMap<>();
             meta.put("page", page);
         } else {
