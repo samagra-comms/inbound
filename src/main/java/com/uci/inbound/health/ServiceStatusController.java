@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.http.HttpStatus;
 
+import org.json.JSONObject;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -31,6 +32,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServiceStatusController {
 	@Autowired 
 	private HealthService healthService;
+
+	/**
+	 * Used by services that are connected to inbound for ping check.
+	 * @return
+	 */
+	@RequestMapping(value = "/ping", method = RequestMethod.GET, produces = { "application/json", "text/json" })
+	public ResponseEntity<ApiResponse> pingCheck() {
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode pingResult = mapper.createObjectNode();
+		pingResult.put("status", "UP");
+		ObjectNode statusNode = mapper.createObjectNode();
+		statusNode.set("UCI-CORE", mapper.createObjectNode().put("status", "UP"));
+		pingResult.set("details", statusNode);
+		ApiResponse response = ApiResponse.builder()
+				.id("api.ping")
+				.params(ApiResponseParams.builder().build())
+				.responseCode("OK")
+				.result(pingResult)
+				.build();
+		return new ResponseEntity<>(response, HttpStatus.OK);
+	}
 
     /**
 	 * In use by sunbird team - to check service liveliness & readliness
