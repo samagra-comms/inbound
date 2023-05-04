@@ -55,6 +55,7 @@ public class CampaignController {
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
+        log.info("Call campaign service : "+campaignId+" page : "+page);
         Map<String, String> meta;
         if(page != null && !page.isEmpty()){
             meta = new HashMap<>();
