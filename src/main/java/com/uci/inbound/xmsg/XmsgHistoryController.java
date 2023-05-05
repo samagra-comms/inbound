@@ -235,7 +235,7 @@ public class XmsgHistoryController {
             log.info("/conversation-history api call... Request: {" + request + "}");
             HttpApiResponse response = HttpApiResponse.builder()
                     .status(HttpStatus.OK.value())
-                    .path("/xmsg/history")
+                    .path("/xmsg/conversation-history")
                     .build();
             if (botId == null || botId.isEmpty()) {
                 response.setStatus(HttpStatus.BAD_REQUEST.value());
@@ -400,17 +400,17 @@ public class XmsgHistoryController {
                         payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
                     }
                     daoMap.put("payload", payloadMap);
-                    daoMap.put("sentTimestamp", sentMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                    daoMap.put("sentTimestamp", sentMap.get(xMessageDAO.getMessageId()).getTimestamp().toString());
                 } else {
                     daoMap.put("sentTimestamp", null);
                 }
                 if (deliverdMap.get(xMessageDAO.getMessageId()) != null) {
-                    daoMap.put("deliveryTimestamp", deliverdMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                    daoMap.put("deliveryTimestamp", deliverdMap.get(xMessageDAO.getMessageId()).getTimestamp().toString());
                 } else {
                     daoMap.put("deliveryTimestamp", null);
                 }
                 if (readMap.get(xMessageDAO.getMessageId()) != null) {
-                    daoMap.put("readTimestamp", readMap.get(xMessageDAO.getMessageId()).getTimestamp());
+                    daoMap.put("readTimestamp", readMap.get(xMessageDAO.getMessageId()).getTimestamp().toString());
                 } else {
                     daoMap.put("readTimestamp", null);
                 }
@@ -465,22 +465,22 @@ public class XmsgHistoryController {
                 }
                 daoMap.put("payload", payloadMap);
                 if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.SENT.name())) {
-                    daoMap.put("sentTimestamp", xMessageDAO.getTimestamp());
+                    daoMap.put("sentTimestamp", xMessageDAO.getTimestamp().toString());
                 } else {
-                    daoMap.put("repliedTimestamp", null);
+                    daoMap.put("sentTimestamp", null);
                 }
                 if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.REPLIED.name())) {
-                    daoMap.put("repliedTimestamp", xMessageDAO.getTimestamp());
+                    daoMap.put("repliedTimestamp", xMessageDAO.getTimestamp().toString());
                 } else {
                     daoMap.put("repliedTimestamp", null);
                 }
                 if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.DELIVERED.name())) {
-                    daoMap.put("deliveredTimestamp", xMessageDAO.getTimestamp());
+                    daoMap.put("deliveredTimestamp", xMessageDAO.getTimestamp().toString());
                 } else {
                     daoMap.put("deliveredTimestamp", null);
                 }
                 if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.READ.name())) {
-                    daoMap.put("readTimestamp", xMessageDAO.getTimestamp());
+                    daoMap.put("readTimestamp", xMessageDAO.getTimestamp().toString());
                 } else {
                     daoMap.put("readTimestamp", null);
                 }
