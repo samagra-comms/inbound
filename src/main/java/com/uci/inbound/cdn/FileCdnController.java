@@ -91,19 +91,37 @@ public class FileCdnController {
     }
 
 
-    @RequestMapping(value = "/minio/getSignedUrl", method = RequestMethod.GET)
-    public String getMinioFile() {
-        return minioClientService.getFileSignedUrl("4229789621234812100-568466840572272579.jpeg");
+    @RequestMapping(value = "/minio/getSignedUrlForFileName", method = RequestMethod.GET)
+    public ResponseEntity<String> getMinioFile(@RequestParam String fileName) {
+		String fileUrl = minioClientService.getFileSignedUrl(fileName);
+		if (fileUrl != null) {
+			return ResponseEntity.ok(fileUrl);
+		}
+		else {
+			return ResponseEntity.notFound().build();
+		}
     }
 
-    @RequestMapping(value = "/azure/getSignedUrl", method = RequestMethod.GET)
-    public String getAzureFile() {
-        return azureBlobService.getFileSignedUrl("testing-1.jpg");
+    @RequestMapping(value = "/azure/getSignedUrlForFileName", method = RequestMethod.GET)
+    public ResponseEntity<String> getAzureFile(@RequestParam String fileName) {
+		String fileUrl = azureBlobService.getFileSignedUrl(fileName);
+		if (fileUrl != null) {
+			return ResponseEntity.ok(fileUrl);
+		}
+		else {
+			return ResponseEntity.notFound().build();
+		}
     }
 
-    @RequestMapping(value = "/sunbird/getSignedUrl", method = RequestMethod.GET)
-    public String getSunbirdFile() {
-        return sunbirdCloudMediaService.getFileSignedUrl("4229789621234812100-568466840572272579.jpeg");
+    @RequestMapping(value = "/sunbird/getSignedUrlForFileName", method = RequestMethod.GET)
+    public ResponseEntity<String> getSunbirdFile(@RequestParam String fileName) {
+		String fileUrl = sunbirdCloudMediaService.getFileSignedUrl(fileName);
+		if (fileUrl != null) {
+			return ResponseEntity.ok(fileUrl);
+		}
+		else {
+			return ResponseEntity.notFound().build();
+		}
     }
 
     @RequestMapping(value = "/azure/container-sas", method = RequestMethod.GET)

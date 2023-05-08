@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.xml.bind.JAXBException;
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -29,7 +31,7 @@ import java.util.function.Consumer;
 @CrossOrigin
 @RestController
 @RequestMapping(value = "/campaign")
-public class Campaign {
+public class CampaignController {
     @Value("${campaign}")
     private String campaign;
 
@@ -52,9 +54,17 @@ public class Campaign {
     String topicFailure;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
+    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
+        log.info("Call campaign service : "+campaignId+" page : "+page);
+        Map<String, String> meta;
+        if(page != null && !page.isEmpty()){
+            meta = new HashMap<>();
+            meta.put("page", page);
+        } else {
+            meta = null;
+        }
         botService.getBotNodeFromId(campaignId).subscribe(data -> {
-                    SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).build();
+                    SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(meta).build();
                     SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
                     MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
                     XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();

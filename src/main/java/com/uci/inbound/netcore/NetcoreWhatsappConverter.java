@@ -37,6 +37,7 @@ public class NetcoreWhatsappConverter {
     @Value("${inbound-error}")
     private String inboundError;
 
+	@Autowired
     private NetcoreWhatsappAdapter netcoreWhatsappAdapter;
 
     @Autowired
@@ -67,11 +68,9 @@ public class NetcoreWhatsappConverter {
     public void netcoreWhatsApp(@RequestBody NetcoreMessageFormat message) throws JsonProcessingException, JAXBException {
         System.out.println(message.toString());
 
-        netcoreWhatsappAdapter = NetcoreWhatsappAdapter.builder()
-                .botservice(botService)
-                .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
-                .mediaSizeLimit(mediaSizeLimit)
-                .build();
+		netcoreWhatsappAdapter.setBotservice(botService);
+		netcoreWhatsappAdapter.setFileCdnProvider(fileCdnFactory.getFileCdnProvider());
+		netcoreWhatsappAdapter.setMediaSizeLimit(mediaSizeLimit);
         try {
             if (message.getMessages()[0].getText() != null &&
                     message.getMessages()[0].getText().getText().toLowerCase().startsWith("#conf")) {

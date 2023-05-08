@@ -11,9 +11,11 @@ import com.uci.utils.model.ApiResponse;
 import com.uci.utils.model.ApiResponseParams;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.http.HttpStatus;
 
+import org.json.JSONObject;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -29,8 +31,35 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = "/service")
 public class ServiceStatusController {
-	@Autowired 
+	@Autowired
 	private HealthService healthService;
+
+	@Value("${test.user.segment.json1:#{''}}")
+	private String userSegmentJson1;
+
+	@Value("${test.user.segment.json2:#{''}}")
+	private String userSegmentJson2;
+
+	/**
+	 * Used by services that are connected to inbound for ping check.
+	 * @return
+	 */
+	@RequestMapping(value = "/ping", method = RequestMethod.GET, produces = { "application/json", "text/json" })
+	public ResponseEntity<ApiResponse> pingCheck() {
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode pingResult = mapper.createObjectNode();
+		pingResult.put("status", "UP");
+		ObjectNode statusNode = mapper.createObjectNode();
+		statusNode.set("UCI-CORE", mapper.createObjectNode().put("status", "UP"));
+		pingResult.set("details", statusNode);
+		ApiResponse response = ApiResponse.builder()
+				.id("api.ping")
+				.params(ApiResponseParams.builder().build())
+				.responseCode("OK")
+				.result(pingResult)
+				.build();
+		return new ResponseEntity<>(response, HttpStatus.OK);
+	}
 
     /**
 	 * In use by sunbird team - to check service liveliness & readliness
@@ -56,7 +85,7 @@ public class ServiceStatusController {
 			}
 		});
     }
-    
+
     @RequestMapping(value = "/health/cassandra", method = RequestMethod.GET, produces = { "application/json", "text/json" })
     public Mono<ResponseEntity<ApiResponse>> cassandraStatusCheck() {
 		return healthService.getCassandraHealthNode().map(result->
@@ -96,7 +125,7 @@ public class ServiceStatusController {
 					}
 				});
     }
-    
+
     @RequestMapping(value = "/health/campaign", method = RequestMethod.GET, produces = { "application/json", "text/json" })
     public Mono<ResponseEntity<ApiResponse>> campaignUrlStatusCheck() {
 		return healthService.getCampaignUrlHealthNode().map(result ->
@@ -116,29 +145,31 @@ public class ServiceStatusController {
 			});
     }
 
-    @RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-    public ResponseEntity<JsonNode> testUserSegment() throws JsonProcessingException, IOException {
+   	@RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
+	public ResponseEntity<JsonNode> testUserSegment() throws Exception {
+		log.info("Json : "+userSegmentJson1);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode result = null;
+		if(userSegmentJson1 == null || userSegmentJson1.isEmpty()){
+			result = mapper.readTree("{\"error\" : \"User Segment JSON Not Found\"}");
+			return  ResponseEntity.ok(result);
+		} else{
+			result = mapper.readTree(userSegmentJson1);
+		}
+		return ResponseEntity.ok(result);
+	}
 
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode arrayNode = mapper.createArrayNode();
-
-        ObjectNode data1 = mapper.createObjectNode();
-        data1.put("id", "1");
-        data1.put("phoneNo", "7597185708");
-        data1.put("name", "Surabhi");
-        data1.put("url", "http://google.com");
-
-        ObjectNode data2 = mapper.createObjectNode();
-        data2.put("id", "2");
-        data2.put("phoneNo", "9783246247");
-        data2.put("name", "Pankaj");
-        data2.put("url", "http://google.com");
-
-        arrayNode.addAll(Arrays.asList(data1, data2));
-
-        ObjectNode result = mapper.createObjectNode();
-        result.put("data", arrayNode);
-
-        return ResponseEntity.ok(result);
-    }
+	@RequestMapping(value = "/testUserSegment2", method = RequestMethod.GET, produces = { "application/json", "text/json" })
+	public ResponseEntity<JsonNode> testUserSegment2() throws Exception {
+		log.info("Json : "+userSegmentJson2);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode result = null;
+		if(userSegmentJson2 == null || userSegmentJson2.isEmpty()){
+			result = mapper.readTree("{\"error\" : \"User Segment JSON Not Found\"}");
+			return  ResponseEntity.ok(result);
+		} else{
+			result = mapper.readTree(userSegmentJson2);
+		}
+		return ResponseEntity.ok(result);
+	}
 }
