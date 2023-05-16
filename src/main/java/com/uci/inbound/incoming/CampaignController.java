@@ -54,6 +54,7 @@ public class CampaignController {
     String topicFailure;
 
     private long cassInsertCount;
+    private long cassInsertErrorCount;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
@@ -125,7 +126,9 @@ public class CampaignController {
     }
 
     private Consumer<Throwable> genericError(String s) {
+        cassInsertErrorCount++;
         return c -> {
+            log.info("Data not inserted in Cassandra Count : " + cassInsertErrorCount);
             log.error(s + "::" + c.getMessage());
         };
     }
