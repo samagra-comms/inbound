@@ -53,6 +53,8 @@ public class CampaignController {
     @Value("${inbound-error}")
     String topicFailure;
 
+    private long cassInsertCount;
+
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
         log.info("Call campaign service : "+campaignId+" page : "+page);
@@ -100,6 +102,10 @@ public class CampaignController {
                     XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
                     xMsgRepo.insert(currentMessageToBeInserted)
                             .doOnError(genericError("Error in inserting current message"))
+                            .doOnSuccess(xMessageDAO -> {
+                                cassInsertCount++;
+                                log.info("Data insert in Cassandra Count : "+cassInsertCount);
+                            })
                             .subscribe(xMessageDAO -> {
                                 sendEventToKafka(xmsg);
                             });
