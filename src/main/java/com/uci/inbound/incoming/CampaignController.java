@@ -53,8 +53,13 @@ public class CampaignController {
     @Value("${inbound-error}")
     String topicFailure;
 
+    private long cassInsertCount;
+    private long cassInsertErrorCount;
+
     @RequestMapping(value = "/start", method = RequestMethod.GET)
     public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
+        final long startTime = System.nanoTime();
+        logTimeTaken(startTime, 0, "process-start: %d ms");
         log.info("Call campaign service : "+campaignId+" page : "+page);
         Map<String, String> meta;
         if(page != null && !page.isEmpty()){
@@ -100,8 +105,13 @@ public class CampaignController {
                     XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
                     xMsgRepo.insert(currentMessageToBeInserted)
                             .doOnError(genericError("Error in inserting current message"))
+                            .doOnSuccess(xMessageDAO -> {
+                                cassInsertCount++;
+                                log.info("Data insert in Cassandra Count : "+cassInsertCount);
+                            })
                             .subscribe(xMessageDAO -> {
                                 sendEventToKafka(xmsg);
+                                logTimeTaken(startTime, 0, "process-end: %d ms");
                             });
                 }
         );
@@ -120,8 +130,20 @@ public class CampaignController {
 
     private Consumer<Throwable> genericError(String s) {
         return c -> {
+            cassInsertErrorCount++;
+            log.info("Data not inserted in Cassandra Count : " + cassInsertErrorCount);
             log.error(s + "::" + c.getMessage());
         };
+    }
+
+    private void logTimeTaken(long startTime, int checkpointID, String formatedMsg) {
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime) / 1000000;
+        if(formatedMsg == null) {
+            log.info(String.format("CP-%d: %d ms", checkpointID, duration));
+        } else {
+            log.info(String.format(formatedMsg, duration));
+        }
     }
 
     @RequestMapping(value = "/pause", method = RequestMethod.GET)
