@@ -147,7 +147,7 @@ public class ServiceStatusController {
     }
 
    	@RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment(@RequestParam(name = "page", required = false) String page, @RequestParam(name = "offset", required = false) String offset) throws Exception {
+	public ResponseEntity<JsonNode> testUserSegment(@RequestParam(name = "limit", required = false) String limit, @RequestParam(name = "offset", required = false) String offset) throws Exception {
 		log.info("Json : "+userSegmentJson1);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode result = null;
@@ -161,7 +161,7 @@ public class ServiceStatusController {
 	}
 
 	@RequestMapping(value = "/testUserSegment2", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment2(@RequestParam(name = "page", required = false) String page, @RequestParam(name = "offset", required = false) String offset) throws Exception {
+	public ResponseEntity<JsonNode> testUserSegment2(@RequestParam(name = "limit", required = false) String limit, @RequestParam(name = "offset", required = false) String offset) throws Exception {
 		log.info("Json : "+userSegmentJson2);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode result = null;
