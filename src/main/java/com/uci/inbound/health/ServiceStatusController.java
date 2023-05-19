@@ -16,6 +16,7 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.http.HttpStatus;
 
 import org.json.JSONObject;
+import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -146,7 +147,7 @@ public class ServiceStatusController {
     }
 
    	@RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment() throws Exception {
+	public ResponseEntity<JsonNode> testUserSegment(@RequestParam(name = "page", required = false) String page, @RequestParam(name = "offset", required = false) String offset) throws Exception {
 		log.info("Json : "+userSegmentJson1);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode result = null;
@@ -160,7 +161,7 @@ public class ServiceStatusController {
 	}
 
 	@RequestMapping(value = "/testUserSegment2", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment2() throws Exception {
+	public ResponseEntity<JsonNode> testUserSegment2(@RequestParam(name = "page", required = false) String page, @RequestParam(name = "offset", required = false) String offset) throws Exception {
 		log.info("Json : "+userSegmentJson2);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode result = null;
