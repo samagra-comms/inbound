@@ -57,7 +57,7 @@ public class CampaignController {
     private long cassInsertErrorCount;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) throws JsonProcessingException, JAXBException {
+    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) {
         final long startTime = System.nanoTime();
         logTimeTaken(startTime, 0, "process-start: %d ms");
         log.info("Call campaign service : "+campaignId+" page : "+page);
@@ -69,50 +69,54 @@ public class CampaignController {
             meta = null;
         }
         botService.getBotNodeFromId(campaignId).subscribe(data -> {
-                    SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(meta).build();
-                    SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
-                    MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
-                    XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
-                    JsonNode adapter = BotUtil.getBotNodeAdapter(data);
-                    log.info("adapter:" + adapter + ", node:" + data);
-                    if (adapter.path("provider").asText().equals("firebase")) {
-                        from.setDeviceType(DeviceType.PHONE_FCM);
-                    } else if (adapter.path("provider").asText().equals("pwa")) {
-                        from.setDeviceType(DeviceType.PHONE_PWA);
+                    try{
+                        SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(meta).build();
+                        SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
+                        MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
+                        XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
+                        JsonNode adapter = BotUtil.getBotNodeAdapter(data);
+                        log.info("adapter:" + adapter + ", node:" + data);
+                        if (adapter.path("provider").asText().equals("firebase")) {
+                            from.setDeviceType(DeviceType.PHONE_FCM);
+                        } else if (adapter.path("provider").asText().equals("pwa")) {
+                            from.setDeviceType(DeviceType.PHONE_PWA);
+                        }
+
+                        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+
+                        XMessage xmsg = new XMessage().builder()
+                                .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
+                                .app(BotUtil.getBotNodeData(data, "name"))
+                                .adapterId(BotUtil.getBotNodeAdapterId(data))
+                                .sessionId(BotUtil.newConversationSessionId())
+                                .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
+                                .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
+                                .from(from)
+                                .to(to)
+                                .messageId(msgId)
+                                .messageState(XMessage.MessageState.REPLIED)
+                                .messageType(XMessage.MessageType.TEXT)
+                                .payload(payload)
+                                .providerURI(adapter.path("provider").asText())
+                                .channelURI(adapter.path("channel").asText())
+                                .timestamp(timestamp.getTime())
+                                .tags(BotUtil.getBotNodeTags(data))
+                                .build();
+
+                        XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
+                        xMsgRepo.insert(currentMessageToBeInserted)
+                                .doOnError(genericError("Error in inserting current message"))
+                                .doOnSuccess(xMessageDAO -> {
+                                    cassInsertCount++;
+                                    log.info("Data insert in Cassandra Count : "+cassInsertCount);
+                                })
+                                .subscribe(xMessageDAO -> {
+                                    sendEventToKafka(xmsg);
+                                    logTimeTaken(startTime, 0, "process-end: %d ms");
+                                });
+                    } catch(Exception ex) {
+                        log.error("Inbound:CampaignController::startCampaign::Error: " + ex.getMessage());
                     }
-
-                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-
-                    XMessage xmsg = new XMessage().builder()
-                            .botId(UUID.fromString(BotUtil.getBotNodeData(data, "id")))
-                            .app(BotUtil.getBotNodeData(data, "name"))
-                            .adapterId(BotUtil.getBotNodeAdapterId(data))
-                            .sessionId(BotUtil.newConversationSessionId())
-                            .ownerId(BotUtil.getBotNodeData(data, "ownerID"))
-                            .ownerOrgId(BotUtil.getBotNodeData(data, "ownerOrgID"))
-                            .from(from)
-                            .to(to)
-                            .messageId(msgId)
-                            .messageState(XMessage.MessageState.REPLIED)
-                            .messageType(XMessage.MessageType.TEXT)
-                            .payload(payload)
-                            .providerURI(adapter.path("provider").asText())
-                            .channelURI(adapter.path("channel").asText())
-                            .timestamp(timestamp.getTime())
-                            .tags(BotUtil.getBotNodeTags(data))
-                            .build();
-
-                    XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
-                    xMsgRepo.insert(currentMessageToBeInserted)
-                            .doOnError(genericError("Error in inserting current message"))
-                            .doOnSuccess(xMessageDAO -> {
-                                cassInsertCount++;
-                                log.info("Data insert in Cassandra Count : "+cassInsertCount);
-                            })
-                            .subscribe(xMessageDAO -> {
-                                sendEventToKafka(xmsg);
-                                logTimeTaken(startTime, 0, "process-end: %d ms");
-                            });
                 }
         );
         return new ResponseEntity<>("Notification Sending", HttpStatus.OK);
