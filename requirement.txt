@@ -1,0 +1,6 @@
+java-sdk==11.0.0
+docker==4.4.4
+kafka-python==2.0.2
+psycopg2==2.9.1
+redis==3.5.3
+fusionauth-client==1.24.0
