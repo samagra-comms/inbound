@@ -72,7 +72,7 @@ public class CampaignController {
                     try{
                         SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(meta).build();
                         SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
-                        MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("7597185708").build();
+                        MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("9876543210").build();
                         XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
                         JsonNode adapter = BotUtil.getBotNodeAdapter(data);
                         log.info("adapter:" + adapter + ", node:" + data);
