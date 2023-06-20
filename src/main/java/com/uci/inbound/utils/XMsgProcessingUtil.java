@@ -513,36 +513,68 @@ public class XMsgProcessingUtil {
 			+", status: "+xMessageDAO.getMessageState()+", timestamp: "+xMessageDAO.getTimestamp());
 	  		return Mono.just(xMessageDAO);
 	  	}
-        
-    	return xMsgRepo.findAllByUserIdAndTimestampAfter(userID, yesterday)
+
+        return xMsgRepo.findFirstByUserIdInAndFromIdInAndMessageStateInAndTimestampAfterOrderByTimestampDesc(List.of(BotUtil.adminUserId, userID), List.of(BotUtil.adminUserId, userID), List.of(XMessage.MessageState.SENT.name(), XMessage.MessageState.REPLIED.name()), yesterday)
                 .collectList()
                 .map(new Function<List<XMessageDAO>, XMessageDAO>() {
                     @Override
                     public XMessageDAO apply(List<XMessageDAO> xMessageDAOS) {
-                    	log.info("xMsgDaos size: "+xMessageDAOS.size()+", messageState.name: "+XMessage.MessageState.SENT.name());
+                        log.info("xMsgDaos size: " + xMessageDAOS.size() + ", messageState.name: " + messageState);
                         if (xMessageDAOS.size() > 0) {
                             List<XMessageDAO> filteredList = new ArrayList<>();
                             for (XMessageDAO xMessageDAO : xMessageDAOS) {
-                            	if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name())
-					                || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
-                            		filteredList.add(xMessageDAO);
-                            	}
-                                    
+                                if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name())
+                                        || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
+                                    filteredList.add(xMessageDAO);
+                                }
+
                             }
                             if (filteredList.size() > 0) {
-                            	filteredList.sort(new Comparator<XMessageDAO>() {
+                                filteredList.sort(new Comparator<XMessageDAO>() {
                                     @Override
                                     public int compare(XMessageDAO o1, XMessageDAO o2) {
                                         return o1.getTimestamp().compareTo(o2.getTimestamp());
                                     }
                                 });
                             }
-                            
+
                             return xMessageDAOS.get(0);
+                        } else{
+                            log.error("xMessageDAOS Size Empty found : " + xMessageDAOS.size());
                         }
                         return new XMessageDAO();
                     }
                 });
+        //Remove this because getting error "Cassandra failure during read query at consistency"
+//    	return xMsgRepo.findAllByUserIdAndTimestampAfter(userID, yesterday)
+//                .collectList()
+//                .map(new Function<List<XMessageDAO>, XMessageDAO>() {
+//                    @Override
+//                    public XMessageDAO apply(List<XMessageDAO> xMessageDAOS) {
+//                    	log.info("xMsgDaos size: "+xMessageDAOS.size()+", messageState.name: "+XMessage.MessageState.SENT.name());
+//                        if (xMessageDAOS.size() > 0) {
+//                            List<XMessageDAO> filteredList = new ArrayList<>();
+//                            for (XMessageDAO xMessageDAO : xMessageDAOS) {
+//                            	if (xMessageDAO.getMessageState().equals(XMessage.MessageState.SENT.name())
+//					                || xMessageDAO.getMessageState().equals(XMessage.MessageState.REPLIED.name())) {
+//                            		filteredList.add(xMessageDAO);
+//                            	}
+//
+//                            }
+//                            if (filteredList.size() > 0) {
+//                            	filteredList.sort(new Comparator<XMessageDAO>() {
+//                                    @Override
+//                                    public int compare(XMessageDAO o1, XMessageDAO o2) {
+//                                        return o1.getTimestamp().compareTo(o2.getTimestamp());
+//                                    }
+//                                });
+//                            }
+//
+//                            return xMessageDAOS.get(0);
+//                        }
+//                        return new XMessageDAO();
+//                    }
+//                });
     }
 
     private Mono<Map<String, Object>> getSentXMessageForReport(XMessage.MessageState messageState, String messageId, String userId) {
