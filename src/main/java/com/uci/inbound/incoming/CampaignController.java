@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -57,7 +58,8 @@ public class CampaignController {
     private long cassInsertErrorCount;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page) {
+    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page,
+                                                @RequestHeader(value = "Conversation-Authorization", required = false) String conversationAuthorization) {
         final long startTime = System.nanoTime();
         logTimeTaken(startTime, 0, "process-start: %d ms");
         log.info("Call campaign service : "+campaignId+" page : "+page);
@@ -68,9 +70,16 @@ public class CampaignController {
         } else {
             meta = null;
         }
+        if(conversationAuthorization != null && !conversationAuthorization.isEmpty()){
+            if(meta == null){
+                meta = new HashMap<>();
+            }
+            meta.put("conversation-authorization", conversationAuthorization);
+        }
+        Map<String, String> finalMeta = meta;
         botService.getBotNodeFromId(campaignId).subscribe(data -> {
                     try{
-                        SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(meta).build();
+                        SenderReceiverInfo from = new SenderReceiverInfo().builder().userID("9876543210").deviceType(DeviceType.PHONE).meta(finalMeta).build();
                         SenderReceiverInfo to = new SenderReceiverInfo().builder().userID("admin").build();
                         MessageId msgId = new MessageId().builder().channelMessageId(UUID.randomUUID().toString()).replyId("9876543210").build();
                         XMessagePayload payload = new XMessagePayload().builder().text(BotUtil.getBotNodeData(data, "startingMessage")).build();
