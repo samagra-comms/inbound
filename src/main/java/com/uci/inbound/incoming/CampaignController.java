@@ -71,6 +71,7 @@ public class CampaignController {
             meta = null;
         }
         if(conversationAuthorization != null && !conversationAuthorization.isEmpty()){
+            log.info("Conversation Authorization found : True");
             if(meta == null){
                 meta = new HashMap<>();
             }
