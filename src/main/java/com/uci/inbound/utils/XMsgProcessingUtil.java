@@ -236,7 +236,8 @@ public class XMsgProcessingUtil {
         XMessageDAO currentMessageToBeInserted = XMessageDAOUtils.convertXMessageToDAO(xmsg);
     	if (isCurrentMessageNotAReply(xmsg)) {
             String whatsappId = xmsg.getMessageId().getChannelMessageId();
-            getLatestXMessage(xmsg.getFrom().getUserID(), XMessage.MessageState.REPLIED)
+            LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
+            getLatestXMessage(xmsg.getFrom().getUserID(), yesterday, XMessage.MessageState.REPLIED.name())
                     .doOnError(genericError("Error in getting last message"))
                     .subscribe(new Consumer<XMessageDAO>() {
                         @Override
@@ -350,30 +351,30 @@ public class XMsgProcessingUtil {
         kafkaProducer.send(topicOutbound, xmessage);
     }
 
-    private Mono<XMessageDAO> getLatestXMessage(String userID, XMessage.MessageState messageState) {
-        LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
-        return xMsgRepo
-                .findAllByFromIdAndTimestampAfter(userID, yesterday)
-                .doOnError(genericError(String.format("Unable to find previous Message for userID %s", userID)))
-                .collectList()
-                .map(xMessageDAOS -> {
-                	if (xMessageDAOS.size() > 0) {
-                        List<XMessageDAO> filteredList = new ArrayList<>();
-                        for (XMessageDAO xMessageDAO : xMessageDAOS) {
-                        	if (xMessageDAO.getMessageState().equals(messageState.name())) {
-                            	filteredList.add(xMessageDAO);
-                            }
-                                
-                        }
-                        if (filteredList.size() > 0) {
-                            filteredList.sort(Comparator.comparing(XMessageDAO::getTimestamp));
-                        }
-
-                        return xMessageDAOS.get(0);
-                    }
-                    return new XMessageDAO();
-                });
-    }
+//    private Mono<XMessageDAO> getLatestXMessage(String userID, XMessage.MessageState messageState) {
+//        LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
+//        return xMsgRepo
+//                .findAllByFromIdAndTimestampAfter(userID, yesterday)
+//                .doOnError(genericError(String.format("Unable to find previous Message for userID %s", userID)))
+//                .collectList()
+//                .map(xMessageDAOS -> {
+//                	if (xMessageDAOS.size() > 0) {
+//                        List<XMessageDAO> filteredList = new ArrayList<>();
+//                        for (XMessageDAO xMessageDAO : xMessageDAOS) {
+//                        	if (xMessageDAO.getMessageState().equals(messageState.name())) {
+//                            	filteredList.add(xMessageDAO);
+//                            }
+//
+//                        }
+//                        if (filteredList.size() > 0) {
+//                            filteredList.sort(Comparator.comparing(XMessageDAO::getTimestamp));
+//                        }
+//
+//                        return xMessageDAOS.get(0);
+//                    }
+//                    return new XMessageDAO();
+//                });
+//    }
 
     /**
      * Find bot from starting message/last message, 
