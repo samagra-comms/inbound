@@ -353,7 +353,7 @@ public class XMsgProcessingUtil {
     private Mono<XMessageDAO> getLatestXMessage(String userID, XMessage.MessageState messageState) {
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1L);
         return xMsgRepo
-                .findFirstByUserIdInAndFromIdInAndMessageStateInAndTimestampAfterOrderByTimestampDesc(List.of(BotUtil.adminUserId, userID), List.of(BotUtil.adminUserId, userID), List.of(messageState.name()), yesterday)
+                .findAllByFromIdAndTimestampAfter(userID, yesterday)
                 .doOnError(genericError(String.format("Unable to find previous Message for userID %s", userID)))
                 .collectList()
                 .map(xMessageDAOS -> {
