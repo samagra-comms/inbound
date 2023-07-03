@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.dao.models.XMessageDAO;
 import com.uci.dao.repository.XMessageRepository;
+import com.uci.inbound.services.XmsgHistoryService;
 import com.uci.utils.BotService;
+import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.utils.model.HttpApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.XMessage;
@@ -40,9 +42,13 @@ public class XmsgHistoryController {
 
     @Autowired
     private XMessageRepository xMsgRepo;
+    @Autowired
+    private RedisCacheService redisCacheService;
 
     @Autowired
     private BotService botService;
+    @Autowired
+    private XmsgHistoryService xmsgHistoryService;
 
     enum MessageState {
         SENT,
@@ -249,9 +255,7 @@ public class XmsgHistoryController {
                 return Mono.just(response);
             }
 
-            Pageable paging = (Pageable) CassandraPageRequest.of(PageRequest.of(0, 1000),
-                    null
-            );
+            final String conversationHistoryRedisKey = userId + "-" + botId;
 
             DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
             Date startD = formatter.parse(startDate);
@@ -272,27 +276,15 @@ public class XmsgHistoryController {
 
                                 String botName = campaignDetails.path("name").asText();
                                 log.info("Bot Name : " + botName);
-//                                String localUserId = userId;
-//                                if (!userId.toLowerCase().startsWith("phone:")) {
-//                                    localUserId = userId.replaceAll("phone:", "");
-//                                }
-                                return xMsgRepo.findAllByUserIdInAndFromIdInAndAppAndTimestampAfterAndTimestampBeforeAndProvider(paging, List.of("admin", userId), List.of("admin", userId), botName, startTimestamp, endTimestamp, provider)
-                                        .map(new Function<Slice<XMessageDAO>, Object>() {
-                                            @Override
-                                            public Object apply(Slice<XMessageDAO> xMessageDAOS) {
-                                                Map<String, Object> result = new HashMap<>();
-                                                List<Map<String, Object>> xMessageDAOListNew = filterConversationHistory(xMessageDAOS.getContent());
-                                                result.put("total", xMessageDAOListNew.size());
-                                                result.put("records", xMessageDAOListNew);
-                                                if(xMessageDAOListNew.size() < 5){
-                                                    log.info("Response :" + result);
-                                                } else {
-                                                    log.info("Response :" + xMessageDAOListNew.size());
-                                                }
-                                                response.setResult(result);
-                                                return response;
-                                            }
-                                        });
+
+                                if (redisCacheService.isKeyExists(conversationHistoryRedisKey)) {
+                                    List<XMessageDAO> xMessageDAOList = (List<XMessageDAO>) redisCacheService.getConversationHistoryFromCache(conversationHistoryRedisKey);
+                                    xmsgHistoryService.sortList(xMessageDAOList, "desc");
+                                    response.setResult(xmsgHistoryService.prepareConversationHistoryResponse(xMessageDAOList));
+                                    return Mono.just(response);
+                                } else {
+                                    return xmsgHistoryService.getConversationHistoryFromCassandra(userId, botName, provider, startTimestamp, endTimestamp, response, conversationHistoryRedisKey);
+                                }
                             }
                         }).flatMap(new Function<Mono<Object>, Mono<? extends Object>>() {
                             @Override
@@ -423,74 +415,5 @@ public class XmsgHistoryController {
         return list;
     }
 
-
-    public List<Map<String, Object>> filterConversationHistory(List<XMessageDAO> xMessageDAOList) {
-        List<Map<String, Object>> list = new ArrayList<>();
-//        xMessageDAOList.sort(Comparator.comparing(XMessageDAO::getTimestamp).reversed());
-        xMessageDAOList.forEach(xMessageDAO -> {
-            Map<String, Object> daoMap = new HashMap<>();
-            daoMap.put("id", xMessageDAO.getId());
-            daoMap.put("messageId", xMessageDAO.getMessageId());
-            daoMap.put("messageState", xMessageDAO.getMessageState());
-            daoMap.put("channel", xMessageDAO.getChannel());
-            daoMap.put("provider", xMessageDAO.getProvider());
-            daoMap.put("fromId", xMessageDAO.getFromId());
-            daoMap.put("userId", xMessageDAO.getUserId());
-            daoMap.put("ownerId", xMessageDAO.getOwnerId());
-            daoMap.put("ownerOrgId", xMessageDAO.getOwnerOrgId());
-            daoMap.put("sessionId", xMessageDAO.getSessionId());
-            daoMap.put("botUuid", xMessageDAO.getBotUuid());
-            daoMap.put("tags", xMessageDAO.getTags());
-//            daoMap.put("xMessage", xMessageDAO.getXMessage());
-//            daoMap.put("timestamp", xMessageDAO.getTimestamp());
-            try {
-
-                String xMessage = xMessageDAO.getXMessage();
-                XMessage currentXmsg = XMessageParser.parse(new ByteArrayInputStream(xMessage.getBytes()));
-                Map<String, Object> payloadMap = new HashMap<>();
-                if (currentXmsg.getPayload().getText() != null) {
-                    payloadMap.put("text", currentXmsg.getPayload().getText());
-                }
-                if (currentXmsg.getPayload().getMedia() != null) {
-                    payloadMap.put("media", currentXmsg.getPayload().getMedia());
-                }
-                if (currentXmsg.getPayload().getButtonChoices() != null) {
-                    payloadMap.put("buttonChoices", currentXmsg.getPayload().getButtonChoices());
-                }
-                if (currentXmsg.getPayload().getLocation() != null) {
-                    payloadMap.put("location", currentXmsg.getPayload().getLocation());
-                }
-                if (currentXmsg.getPayload().getContactCard() != null) {
-                    payloadMap.put("contactCard", currentXmsg.getPayload().getContactCard());
-                }
-                daoMap.put("payload", payloadMap);
-                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.SENT.name())) {
-                    daoMap.put("sentTimestamp", xMessageDAO.getTimestamp().toString());
-                } else {
-                    daoMap.put("sentTimestamp", null);
-                }
-                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.REPLIED.name())) {
-                    daoMap.put("repliedTimestamp", xMessageDAO.getTimestamp().toString());
-                } else {
-                    daoMap.put("repliedTimestamp", null);
-                }
-                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.DELIVERED.name())) {
-                    daoMap.put("deliveredTimestamp", xMessageDAO.getTimestamp().toString());
-                } else {
-                    daoMap.put("deliveredTimestamp", null);
-                }
-                if (xMessageDAO.getMessageState().equalsIgnoreCase(XMessage.MessageState.READ.name())) {
-                    daoMap.put("readTimestamp", xMessageDAO.getTimestamp().toString());
-                } else {
-                    daoMap.put("readTimestamp", null);
-                }
-            } catch (Exception ex) {
-                log.error("Exception when fetching payload: " + ex.getMessage());
-            }
-
-            list.add(daoMap);
-        });
-        return list;
-    }
 
 }
