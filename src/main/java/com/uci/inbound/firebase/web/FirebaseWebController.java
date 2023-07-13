@@ -56,7 +56,7 @@ public class FirebaseWebController {
     @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void dikshaWeb(@RequestBody FirebaseWebMessage message) throws JsonProcessingException, JAXBException {
 
-        System.out.println(mapper.writeValueAsString(message));
+        log.info("FirebaseWebController:dikshaWeb:: Request: " + mapper.writeValueAsString(message));
 
         firebaseNotificationAdapter = FirebaseNotificationAdapter.builder()
                 .botService(botService)

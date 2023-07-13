@@ -278,11 +278,13 @@ public class XmsgHistoryController {
                                 log.info("Bot Name : " + botName);
 
                                 if (redisCacheService.isKeyExists(conversationHistoryRedisKey)) {
+                                    log.info("Getting Conversation History from Redis : " + botId + " UserId : " + userId);
                                     List<XMessageDAO> xMessageDAOList = (List<XMessageDAO>) redisCacheService.getConversationHistoryFromCache(conversationHistoryRedisKey);
                                     xmsgHistoryService.sortList(xMessageDAOList, "desc");
                                     response.setResult(xmsgHistoryService.prepareConversationHistoryResponse(xMessageDAOList));
                                     return Mono.just(response);
                                 } else {
+                                    log.info("Getting Conversation History from Cassandra : " + botId + " UserId : " + userId);
                                     return xmsgHistoryService.getConversationHistoryFromCassandra(userId, botName, provider, startTimestamp, endTimestamp, response, conversationHistoryRedisKey);
                                 }
                             }

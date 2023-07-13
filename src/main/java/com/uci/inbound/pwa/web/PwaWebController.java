@@ -1,5 +1,5 @@
 package com.uci.inbound.pwa.web;
- 
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uci.adapter.cdn.FileCdnFactory;
@@ -13,7 +13,6 @@ import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,7 +60,7 @@ public class PwaWebController {
     @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public void dikshaWeb(@RequestBody PwaWebMessage message) throws JsonProcessingException, JAXBException {
 
-        System.out.println(mapper.writeValueAsString(message));
+        log.info("PwaWebController:dikshaWeb:: Request: " + mapper.writeValueAsString(message));
 
         pwaWebPortalAdapter = PwaWebPortalAdapter.builder()
                 .fileCdnProvider(fileCdnFactory.getFileCdnProvider())
