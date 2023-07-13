@@ -20,6 +20,7 @@ import messagerosa.core.model.SenderReceiverInfo;
 import messagerosa.core.model.XMessage;
 import messagerosa.core.model.XMessagePayload;
 import messagerosa.xml.XMessageParser;
+import org.apache.commons.io.IOUtils;
 import reactor.core.publisher.Mono;
 
 import javax.xml.bind.JAXBException;
@@ -127,6 +128,8 @@ public class XMsgProcessingUtil {
                                     });
                         } else if (xmsg.getMessageState().equals(XMessage.MessageState.DELIVERED)
                                 || xmsg.getMessageState().equals(XMessage.MessageState.READ)) {
+                            log.info("XMsgProcessingUtil:process:: Message State : " + xmsg.getMessageState() + " messageId : " + xmsg.getMessageId().getChannelMessageId()
+                                    + " UserId : " + xmsg.getFrom().getUserID());
                             getSentXMessageForReport(xmsg.getMessageState(), xmsg.getMessageId().getChannelMessageId(), xmsg.getFrom().getUserID())
                                     .doOnError(genericError("Exception in sent latest xMessage for received receipt request."))
                                     .subscribe(dataMap -> {
@@ -134,6 +137,15 @@ public class XMsgProcessingUtil {
                                             XMessageDAO xMessageLast = (XMessageDAO) dataMap.get("xMessageDao");
                                             if (xMessageLast.getApp() != null && !xMessageLast.getApp().isEmpty()) {
                                                 log.info("App name found: " + xMessageLast.getApp() + " for user id: " + xmsg.getFrom().getUserID());
+                                                XMessage xMessage = null;
+                                                try {
+                                                    xMessage = XMessageParser.parse(IOUtils.toInputStream(xMessageLast.getXMessage()));
+                                                } catch (JAXBException e) {
+                                                    log.error("An Error occurred: " + e.getMessage());
+                                                }
+                                                if (xMessage != null) {
+                                                    xmsg.setAdapterId(xMessage.getAdapterId());
+                                                }
                                                 xmsg.setApp(xMessageLast.getApp());
                                                 xmsg.setSessionId(xMessageLast.getSessionId());
                                                 xmsg.setOwnerOrgId(xMessageLast.getOwnerOrgId());
