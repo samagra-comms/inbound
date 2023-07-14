@@ -82,3 +82,5 @@ target/
 .gradle/
 gradle
 .DS_Store
+
+.idea/
