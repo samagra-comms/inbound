@@ -139,7 +139,7 @@ public class CampaignController {
         } catch (JAXBException e) {
             kafkaProducer.send(topicFailure, "Start request for bot.");
         }
-        kafkaProducer.send(topicSuccess, xmessage);
+        kafkaProducer.send(campaign, xmessage);
     }
 
     private Consumer<Throwable> genericError(String s) {
