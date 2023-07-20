@@ -33,8 +33,8 @@ import java.util.function.Consumer;
 @RestController
 @RequestMapping(value = "/campaign")
 public class CampaignController {
-    @Value("${campaign}")
-    private String campaign;
+    @Value("${notificationInboundProcessed}")
+    private String notificationInboundProcessed;
 
     @Autowired
     public SimpleProducer kafkaProducer;
@@ -47,9 +47,6 @@ public class CampaignController {
 
     @Autowired
     private XMessageRepository xMsgRepo;
-
-    @Value("${inboundProcessed}")
-    String topicSuccess;
 
     @Value("${inbound-error}")
     String topicFailure;
@@ -139,7 +136,7 @@ public class CampaignController {
         } catch (JAXBException e) {
             kafkaProducer.send(topicFailure, "Start request for bot.");
         }
-        kafkaProducer.send(topicSuccess, xmessage);
+        kafkaProducer.send(notificationInboundProcessed, xmessage);
     }
 
     private Consumer<Throwable> genericError(String s) {
@@ -162,13 +159,13 @@ public class CampaignController {
 
     @RequestMapping(value = "/pause", method = RequestMethod.GET)
     public void pauseCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-        kafkaProducer.send(campaign, campaignId);
+        kafkaProducer.send(notificationInboundProcessed, campaignId);
         return;
     }
 
     @RequestMapping(value = "/resume", method = RequestMethod.GET)
     public void resumeCampaign(@RequestParam("campaignId") String campaignId) throws JsonProcessingException, JAXBException {
-        kafkaProducer.send(campaign, campaignId);
+        kafkaProducer.send(notificationInboundProcessed, campaignId);
         return;
     }
 
