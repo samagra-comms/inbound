@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Function;
@@ -31,6 +33,7 @@ public class XmsgHistoryService {
 
     /**
      * Preparing conversation history response
+     *
      * @param xMessageDAOList
      * @return
      */
@@ -55,6 +58,7 @@ public class XmsgHistoryService {
     /**
      * Get Conversation History from Cassandra
      * According to UserId and BotId and Date Range
+     *
      * @param userId
      * @param botName
      * @param provider
@@ -99,6 +103,7 @@ public class XmsgHistoryService {
     /**
      * Filter conversation history data
      * which gets from cassandra
+     *
      * @param xMessageDAOList
      * @return
      */
@@ -130,6 +135,8 @@ public class XmsgHistoryService {
                     payloadMap.put("text", currentXmsg.getPayload().getText());
                 }
                 if (currentXmsg.getPayload().getMedia() != null) {
+                    concatMinioSignedUrl(currentXmsg);
+                    log.info("XmsgHistoryService:filterConversationHistory:: After change media url : " + currentXmsg);
                     payloadMap.put("media", currentXmsg.getPayload().getMedia());
                 }
                 if (currentXmsg.getPayload().getButtonChoices() != null) {
@@ -173,6 +180,7 @@ public class XmsgHistoryService {
 
     /**
      * Sorting List of XMessageDao
+     *
      * @param xMessageDAOList
      * @param orderBy
      */
@@ -184,4 +192,46 @@ public class XmsgHistoryService {
         }
     }
 
+    private void concatMinioSignedUrl(XMessage xMessage) {
+        if (xMessage != null && xMessage.getPayload() != null && xMessage.getPayload().getMedia().getUrl() != null && !xMessage.getPayload().getMedia().getUrl().isEmpty()) {
+            String signedURL = xMessage.getPayload().getMedia().getUrl();
+            if (isSignedUrl(signedURL)) {
+                String url = extractBaseURL(signedURL);
+                xMessage.getPayload().getMedia().setUrl(url);
+            }
+        }
+    }
+
+    private Boolean isSignedUrl(String originalURL) {
+        try {
+            URL url = new URL(originalURL);
+            if (url != null && url.getQuery() != null && !url.getQuery().isEmpty()) {
+                return true;
+            }
+            return false;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private String extractBaseURL(String originalURL) {
+        try {
+            URL url = new URL(originalURL);
+            String protocol = url.getProtocol();
+            String host = url.getHost();
+            int port = url.getPort();
+            String path = url.getPath();
+
+            if (port != -1) {
+                return protocol + "://" + host + ":" + port + path;
+            } else {
+                return protocol + "://" + host + path;
+            }
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }
