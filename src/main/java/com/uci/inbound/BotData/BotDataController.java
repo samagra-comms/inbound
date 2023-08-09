@@ -1,6 +1,7 @@
 package com.uci.inbound.BotData;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.uci.dao.repository.XMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/botData")
@@ -64,20 +66,28 @@ public class BotDataController {
                         }
                     }
                     HashSet<String> notSent = new HashSet<>(), sent = new HashSet<>();
+                    Pattern numberPattern = Pattern.compile("^\\d+$");
                     xMessageDAOS.getContent().forEach(xMessageDAO -> {
                         if (xMessageDAO.getMessageState() != null && !xMessageDAO.getMessageState().isEmpty()) {
-                            if (xMessageDAO.getMessageState().equalsIgnoreCase("NOT_SENT")) {
-                                notSent.add(xMessageDAO.getUserId());
-                            }
-                            else {
-                                sent.add(xMessageDAO.getUserId());
+                            if (numberPattern.matcher(xMessageDAO.getUserId()).matches()) {
+                                if (xMessageDAO.getMessageState().equalsIgnoreCase("NOT_SENT")) {
+                                    notSent.add(xMessageDAO.getUserId());
+                                }
+                                else {
+                                    sent.add(xMessageDAO.getUserId());
+                                }
                             }
                         }
                     });
-                    ObjectNode responseBody = new ObjectMapper().createObjectNode();
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode responseBody = mapper.createObjectNode();
                     responseBody.put("next_page", nextPageStateEncoded);
-                    responseBody.put("success", sent.toString());
-                    responseBody.put("failure", notSent.toString());
+                    ArrayNode sentArrayNode = mapper.createArrayNode();
+                    ArrayNode notSentArrayNode = mapper.createArrayNode();
+                    sent.forEach(sentArrayNode::add);
+                    notSent.forEach(notSentArrayNode::add);
+                    responseBody.set("success", sentArrayNode);
+                    responseBody.set("failure", notSentArrayNode);
                     ResponseEntity response = ResponseEntity.ok().body(responseBody);
                     return response;
                 })
