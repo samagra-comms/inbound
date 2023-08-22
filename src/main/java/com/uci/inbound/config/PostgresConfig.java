@@ -42,15 +42,6 @@ public class PostgresConfig extends AbstractR2dbcConfiguration {
     @Bean
     public ConnectionFactory connectionFactory() {
         log.info("Postgres Config : " + host + " : port : " + port);
-//        return new PostgresqlConnectionFactory(
-//                PostgresqlConnectionConfiguration.builder()
-//                        .host(host)
-//                        .port(port)
-//                        .username(username)
-//                        .password(password)
-//                        .database(database)
-//                        .build());
-
         PostgresqlConnectionConfiguration postgresConfig = PostgresqlConnectionConfiguration.builder()
                 .host(host)
                 .port(port)
@@ -60,7 +51,7 @@ public class PostgresConfig extends AbstractR2dbcConfiguration {
                 .build();
         ConnectionFactory connectionFactory = new PostgresqlConnectionFactory(postgresConfig);
         ConnectionPoolConfiguration poolConfig = ConnectionPoolConfiguration.builder(connectionFactory)
-                .name("aggregatedb-pool")
+                .name("user-analytics-pool")
                 .initialSize(Integer.parseInt(initialSize))
                 .maxSize(Integer.parseInt(maxSize))
                 .maxIdleTime(Duration.ofMillis(Integer.parseInt(maxIdleTime)))
