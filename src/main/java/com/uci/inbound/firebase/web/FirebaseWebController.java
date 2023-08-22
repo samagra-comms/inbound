@@ -116,34 +116,6 @@ public class FirebaseWebController {
         }
     }
 
-
-    /**
-     * TODO uncomment this function when migrate this with diksha
-     */
-//    @RequestMapping(value = "/web", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-//    public void dikshaWeb(@RequestBody FirebaseWebMessage message) throws JsonProcessingException, JAXBException {
-//
-//        log.info("FirebaseWebController:dikshaWeb:: Request: " + mapper.writeValueAsString(message));
-//
-//        firebaseNotificationAdapter = FirebaseNotificationAdapter.builder()
-//                .botService(botService)
-//                .build();
-//
-//        XMsgProcessingUtil.builder()
-//                .adapter(firebaseNotificationAdapter)
-//                .xMsgRepo(xmsgRepo)
-//                .inboundMessage(message)
-//                .topicFailure(inboundError)
-//                .topicSuccess(inboundProcessed)
-//                .kafkaProducer(kafkaProducer)
-//                .botService(botService)
-//                .redisCacheService(redisCacheService)
-//                .topicOutbound(outboundTopic)
-//                .topicReport(topicReport)
-//                .build()
-//                .process();
-//    }
-
     /**
      * @param deliveryReport
      * @return
