@@ -94,8 +94,10 @@ public class FirebaseWebController {
                 }
                 return Mono.empty();
             });
+        } else {
+            log.error("FirebaseWebController:processMessage:: Invalid Request - ExternalId or UserId not found in the request");
+            return Mono.empty();
         }
-        return Mono.empty();
     }
 
     /**
@@ -133,93 +135,5 @@ public class FirebaseWebController {
                 .cassId(xMessageDAO.getId().toString())
                 .build());
     }
-
-//    private void init(FirebaseWebMessage message) throws JsonProcessingException {
-//        log.info("FirebaseWebController:deliveryReport:: Request: " + mapper.writeValueAsString(message));
-//        if (message != null && message.getReport() != null && message.getReport().getExternalId() != null && !message.getReport().getExternalId().isEmpty()) {
-//
-//            String externalId = message.getReport().getExternalId();
-//            String userId = message.getReport().getDestAdd();
-//
-//            if (redisCacheService.isKeyExists(externalId + "_" + userId)) {
-//                XMessageDAO xMessageDAO = (XMessageDAO) redisCacheService.getCache(externalId + "_" + userId);
-//                if (xMessageDAO != null) {
-//                    DeliveryReport deliveryReport = DeliveryReport.builder()
-//                            .botId(xMessageDAO.getBotUuid().toString())
-//                            .botName(xMessageDAO.getApp())
-//                            .externalId(message.getReport().getExternalId())
-//                            .messageState(message.getEventType())
-//                            .fcmToken(message.getReport().getFcmDestAdd())
-//                            .userId(message.getReport().getDestAdd())
-//                            .build();
-//                    saveDeliveryReport(deliveryReport);
-//                }
-//            } else {
-//                log.info("Fetching data from Cassandra... External Id : " + externalId + " : UserId : " + userId);
-////                getXMessageDaoCass(externalId, userId).subscribe(new Consumer<List<XMessageDAO>>() {
-////                    @Override
-////                    public void accept(List<XMessageDAO> xMessageDAOList) {
-////                        if (xMessageDAOList != null && xMessageDAOList.isEmpty()) {
-////                            log.error("getXMessageDaoCass Dao Empty found : " + xMessageDAOList.size() + " : ExternalId : " + externalId + " : UserId : " + userId);
-////                        }
-////                        for (XMessageDAO xMessageDAO : xMessageDAOList) {
-////                            DeliveryReport deliveryReport = DeliveryReport.builder()
-////                                    .botId(xMessageDAO.getBotUuid().toString())
-////                                    .botName(xMessageDAO.getApp())
-////                                    .externalId(message.getReport().getExternalId())
-////                                    .messageState(message.getEventType())
-////                                    .fcmToken(message.getReport().getFcmDestAdd())
-////                                    .userId(message.getReport().getDestAdd())
-////                                    .build();
-////                            saveDeliveryReport(deliveryReport);
-////                        }
-////                    }
-////                });
-//            }
-//        } else {
-//            log.error("FirebaseWebController:deliveryReport:: Invalid Request: " + message);
-//        }
-//
-//    }
-
-    /**
-     * @param deliveryReport
-     * @return
-     */
-//    private void saveDeliveryReport1(DeliveryReport deliveryReport) {
-//        log.info("saving delivery report start ...");
-//        deliveryReportRepository.save(deliveryReport)
-//                .doOnError(error -> {
-//                    log.error("An error occurred: " + error.getMessage(), error);
-//                })
-//                .subscribe(new Consumer<DeliveryReport>() {
-//                    @Override
-//                    public void accept(DeliveryReport deliveryReport1) {
-//                        if (deliveryReport1.getId() != null) {
-//                            log.info("FirebaseWebController:Delivery Report Inserted Success : " + deliveryReport1);
-//                        } else {
-//                            log.info("FirebaseWebController:Delivery Report not Inserted : " + deliveryReport1);
-//                        }
-//                    }
-//                });
-//    }
-
-//    private Mono<List<XMessageDAO>> getXMessageDaoCass(String externalId, String userId) {
-//        if (externalId != null && !externalId.isEmpty() && userId != null && !userId.isEmpty()) {
-//            return xmsgRepo.findAllByMessageIdAndUserIdInAndFromIdIn(externalId, List.of(BotUtil.adminUserId, userId), List.of(BotUtil.adminUserId, userId)).collectList()
-//                    .map(new Function<List<XMessageDAO>, List<XMessageDAO>>() {
-//                        @Override
-//                        public List<XMessageDAO> apply(List<XMessageDAO> xMessageDAOS) {
-//                            if (xMessageDAOS != null && xMessageDAOS.size() > 0) {
-//                                log.info("xMessageDAOList where messageId : Bot Name : " + xMessageDAOS.get(0).getApp() + " : Bot Id: " + xMessageDAOS.get(0).getBotUuid());
-//                            }
-//                            return xMessageDAOS;
-//                        }
-//                    });
-//        } else {
-//            log.error("ExternalId or UserId not found : " + externalId + " :: Userid : " + userId);
-//            return Mono.empty();
-//        }
-//    }
 }
 
