@@ -11,7 +11,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 
 @EnableKafka
 @EnableReactiveCassandraRepositories("com.uci.dao")
-@EntityScan("com.uci.dao")
+@EntityScan(basePackages = {"com.uci.inbound.entity", "com.uci.dao"})
 @PropertySources({
         @PropertySource("classpath:application-messagerosa.properties"),
         @PropertySource("classpath:application.properties"),
