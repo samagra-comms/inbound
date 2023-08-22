@@ -39,4 +39,6 @@ public class DeliveryReport {
     private String messageState;
     @Column(value = "created_on")
     private LocalDateTime createdOn;
+    @Column(value = "cass_id")
+    private String cassId;
 }
