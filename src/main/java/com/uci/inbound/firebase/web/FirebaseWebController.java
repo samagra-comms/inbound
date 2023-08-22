@@ -95,7 +95,7 @@ public class FirebaseWebController {
                     @Override
                     public void accept(List<XMessageDAO> xMessageDAOList) {
                         if (xMessageDAOList != null && xMessageDAOList.isEmpty()) {
-                            log.error("getXMessageDaoCass Dao Empty found : " + xMessageDAOList.size());
+                            log.error("getXMessageDaoCass Dao Empty found : " + xMessageDAOList.size() + " : ExternalId : " + externalId + " : UserId : " + userId);
                         }
                         for (XMessageDAO xMessageDAO : xMessageDAOList) {
                             DeliveryReport deliveryReport = DeliveryReport.builder()
