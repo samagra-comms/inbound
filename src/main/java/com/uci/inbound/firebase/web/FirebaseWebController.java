@@ -132,7 +132,7 @@ public class FirebaseWebController {
                 .messageState(message.getEventType())
                 .fcmToken(message.getReport().getFcmDestAdd())
                 .userId(message.getReport().getDestAdd())
-                .cassId(xMessageDAO.getId().toString())
+                .cassId(xMessageDAO.getId() != null ? xMessageDAO.getId().toString() : null)
                 .build());
     }
 }
