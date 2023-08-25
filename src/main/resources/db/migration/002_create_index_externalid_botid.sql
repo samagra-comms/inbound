@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS delivery_report_external_id_idx ON delivery_report (external_id,bot_id);
