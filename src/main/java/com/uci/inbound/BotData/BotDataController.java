@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.UUID;
@@ -29,12 +31,15 @@ public class BotDataController {
     private XMessageRepository xMessageRepository;
 
     @GetMapping(path = "/getBroadcastReport", produces = { "application/json" })
-    public Mono<ResponseEntity> getBroadcastReport(@Param("botId") String botId, @Param("nextPage") String nextPage, @RequestParam(value = "limit", defaultValue = "1000") int limit) {
+    public Mono<ResponseEntity> getBroadcastReport(@Param("botId") String botId, @Param("nextPage") String nextPage,
+                                                   @RequestParam(value = "limit", defaultValue = "1000") int limit,
+                                                   @RequestParam(value = "createdAt", required = false) String createdAt) {
         if (limit == 0) {
             limit = 1000;
         }
         PageRequest pageRequest = PageRequest.of(0, limit);
         ByteBuffer pagingState = null;
+        LocalDateTime botCreationDate = LocalDateTime.now().minusDays(7L);
         UUID botUuid;
         if (botId == null || botId.isEmpty()) {
             return Mono.just(ResponseEntity.badRequest().body("'botId' is required!"));
@@ -53,8 +58,16 @@ public class BotDataController {
                 return Mono.just(ResponseEntity.badRequest().body("Invalid 'nextPage' value!"));
             }
         }
+        if (createdAt != null) {
+            try {
+                botCreationDate = new Timestamp(Long.parseLong(createdAt)).toLocalDateTime();
+            }
+            catch (NumberFormatException e) {
+                return Mono.just(ResponseEntity.badRequest().body("Invalid DateTime parameter passed!"));
+            }
+        }
         CassandraPageRequest cassandraPageRequest = CassandraPageRequest.of(pageRequest, pagingState);
-        return xMessageRepository.findAllByBotUuid(botUuid, cassandraPageRequest)
+        return xMessageRepository.findAllByBotUuidAndTimestampAfter(botUuid, botCreationDate, cassandraPageRequest)
                 .map(xMessageDAOS -> {
                     String nextPageStateEncoded = null;
                     if (xMessageDAOS.hasNext()) {
