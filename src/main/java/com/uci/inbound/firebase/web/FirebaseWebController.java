@@ -9,6 +9,7 @@ import com.uci.dao.repository.XMessageRepository;
 import com.uci.inbound.entity.DeliveryReport;
 import com.uci.inbound.repository.DeliveryReportRepository;
 import com.uci.utils.BotService;
+import com.uci.utils.bot.util.BotUtil;
 import com.uci.utils.cache.service.RedisCacheService;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.xml.bind.JAXBException;
+import java.util.List;
+import java.util.function.Function;
 
 @Slf4j
 @RestController
@@ -78,26 +81,38 @@ public class FirebaseWebController {
      * @return
      */
     private Mono<Void> processMessage(FirebaseWebMessage message) {
-        if (message != null && message.getReport() != null && message.getReport().getExternalId() != null && !message.getReport().getExternalId().isEmpty()) {
-            String externalId = message.getReport().getExternalId();
-            String userId = message.getReport().getDestAdd();
-            return Mono.defer(() -> {
+        return Mono.defer(() -> {
+            if (message != null && message.getReport() != null && message.getReport().getExternalId() != null && !message.getReport().getExternalId().isEmpty()) {
+                String externalId = message.getReport().getExternalId();
+                String userId = message.getReport().getDestAdd();
+
                 if (redisCacheService.isKeyExists(externalId + "_" + userId)) {
                     log.info("FirebaseWebController:processMessage:: externalId found in cache : " + externalId + " for this user : " + userId);
                     XMessageDAO xMessageDAO = (XMessageDAO) redisCacheService.getCache(externalId + "_" + userId);
                     if (xMessageDAO != null) {
                         return createDeliveryReport(xMessageDAO, message)
-                                .flatMap(this::saveDeliveryReport);
+                                .flatMap(this::saveDeliveryReport)
+                                .then();
                     }
                 } else {
-                    log.error("FirebaseWebController:processMessage:: externalId not found in cache : " + externalId + " for this user : " + userId);
+                    return Flux.just(message)
+                            .flatMap(this::getXMessageDaoCass)
+                            .flatMap(xMessageDAOList -> {
+                                if (xMessageDAOList != null && !xMessageDAOList.isEmpty()) {
+                                    return createDeliveryReport(xMessageDAOList.get(0), message);
+                                } else {
+                                    return Mono.empty(); // Return an empty Mono if xMessageDAOList is empty
+                                }
+                            })
+                            .flatMap(this::saveDeliveryReport)
+                            .then();
                 }
+            } else {
+                log.error("FirebaseWebController:processMessage:: Invalid Request - ExternalId or UserId not found in the request");
                 return Mono.empty();
-            });
-        } else {
-            log.error("FirebaseWebController:processMessage:: Invalid Request - ExternalId or UserId not found in the request");
+            }
             return Mono.empty();
-        }
+        });
     }
 
     /**
@@ -134,6 +149,22 @@ public class FirebaseWebController {
                 .userId(message.getReport().getDestAdd())
                 .cassId(xMessageDAO.getId() != null ? xMessageDAO.getId().toString() : null)
                 .build());
+    }
+
+    private Mono<List<XMessageDAO>> getXMessageDaoCass(FirebaseWebMessage message) {
+        log.info("getXMessageDaoCass::Fetching data in Cass : " + message.getReport().getExternalId() + " :: UserId : " + message.getReport().getDestAdd());
+        return xmsgRepo.findAllByMessageIdAndUserIdInAndFromIdIn(message.getReport().getExternalId(), List.of(BotUtil.adminUserId, message.getReport().getDestAdd()), List.of(BotUtil.adminUserId, message.getReport().getDestAdd())).collectList()
+                .map(new Function<List<XMessageDAO>, List<XMessageDAO>>() {
+                    @Override
+                    public List<XMessageDAO> apply(List<XMessageDAO> xMessageDAOS) {
+                        if (xMessageDAOS != null && xMessageDAOS.size() > 0) {
+                            log.info("Cassandra::Data found for this externalId : " + message.getReport().getExternalId() + " :: UserId: " + message.getReport().getDestAdd());
+                        } else {
+                            log.error("Cassandra::No Data found for this externalId : " + message.getReport().getExternalId() + " :: UserId: " + message.getReport().getDestAdd());
+                        }
+                        return xMessageDAOS;
+                    }
+                });
     }
 }
 
