@@ -9,12 +9,14 @@ import com.uci.adapter.cdn.service.SunbirdCloudMediaService;
 import com.uci.utils.bot.util.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
 
 
 @Slf4j
@@ -30,6 +32,10 @@ public class FileCdnController {
     @Autowired
     private SunbirdCloudMediaService sunbirdCloudMediaService;
 
+    @Autowired
+    @Qualifier("rest")
+    private RestTemplate restTemplate;
+
     @RequestMapping(value = "/minioSignedUrl", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = {"application/json", "text/json"})
     public ResponseEntity<JsonNode> minioRequest(@RequestParam MultipartFile file) {
         try {
@@ -42,20 +48,26 @@ public class FileCdnController {
                 log.info("MimeType : " + mimeType);
                 if(FileUtil.isValidFileType(mimeType)) {
                     try {
+                        if (fileExistsWithSameName(file.getOriginalFilename())) {
+                            return new ResponseEntity<>(
+                                    mapper.createObjectNode().put("Error", "File with same name already exists!"),
+                                    HttpStatus.CONFLICT
+                            );
+                        }
                         byte[] inputBytes = FileUtil.getInputBytesFromInputStream(file.getInputStream());
                         if(inputBytes != null) {
                             /* Unique File Name */
                             String name = FileUtil.getUploadedFileName(mimeType, "");
                             String filePath = FileUtil.fileToLocalFromBytes(inputBytes, mimeType, name);
-                            String minioFileName = minioClientService.uploadFileFromPath(filePath, name);
+                            String minioFileName = minioClientService.uploadFileFromPath(filePath, file.getOriginalFilename());
                             if (minioFileName != null) {
 //                                String signedUrl = minioClientService.getFileSignedUrl(minioFileName);
-                                String signedUrl = minioClientService.getFileSignedUrl(name);
+                                String signedUrl = minioClientService.getFileSignedUrl(file.getOriginalFilename());
                                 if (signedUrl != null) {
                                     result = mapper.createObjectNode();
                                     result.put("url", signedUrl);
                                     result.put("mimeType", mimeType);
-                                    result.put("fileName", name);
+                                    result.put("fileName", file.getOriginalFilename());
                                     return ResponseEntity.ok(result);
                                 } else {
                                     result = mapper.createObjectNode();
@@ -127,5 +139,16 @@ public class FileCdnController {
     @RequestMapping(value = "/azure/container-sas", method = RequestMethod.GET)
     public void generateAzureContainerSASToken() {
         log.info(azureBlobService.generateContainerSASToken());
+    }
+
+    private boolean fileExistsWithSameName(String name) {
+        String signedUrl = minioClientService.getFileSignedUrl(name);
+        ResponseEntity<Object> response = restTemplate.exchange(
+                URI.create(signedUrl),
+                HttpMethod.HEAD,
+                HttpEntity.EMPTY,
+                Object.class
+        );
+        return response.getStatusCode() != HttpStatus.NOT_FOUND;
     }
 }
