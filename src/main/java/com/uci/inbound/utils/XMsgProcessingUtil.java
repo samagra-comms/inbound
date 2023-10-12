@@ -3,7 +3,6 @@ package com.uci.inbound.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.uci.adapter.provider.factory.AbstractProvider;
 import com.uci.adapter.Request.CommonMessage;
@@ -19,14 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.SenderReceiverInfo;
 import messagerosa.core.model.XMessage;
 import messagerosa.core.model.XMessagePayload;
-import messagerosa.xml.XMessageParser;
 import reactor.core.publisher.Mono;
 
-import javax.xml.bind.JAXBException;
-
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
+import jakarta.xml.bind.JAXBException;
 
 import java.time.LocalDateTime;
 import java.util.*;

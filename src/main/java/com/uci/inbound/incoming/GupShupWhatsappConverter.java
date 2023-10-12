@@ -1,11 +1,10 @@
 package com.uci.inbound.incoming;
 
-import javax.validation.Valid;
-import javax.xml.bind.JAXBException;
+import jakarta.validation.Valid;
+import jakarta.xml.bind.JAXBException;
 
 import com.uci.adapter.cdn.FileCdnFactory;
 import com.uci.adapter.gs.whatsapp.GupShupWhatsappAdapter;
-import com.uci.adapter.cdn.service.SunbirdCloudMediaService;
 import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.dao.repository.XMessageRepository;
 import com.uci.utils.BotService;
@@ -23,12 +22,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uci.adapter.gs.whatsapp.GSWhatsAppMessage;
 
 import lombok.extern.slf4j.Slf4j;
-import org.sunbird.cloud.storage.BaseStorageService;
-import org.sunbird.cloud.storage.factory.StorageConfig;
-import org.sunbird.cloud.storage.factory.StorageServiceFactory;
-import scala.Option;
-
-import java.time.LocalDateTime;
 
 @Slf4j
 @RestController

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uci.adapter.cdn.FileCdnFactory;
 import com.uci.adapter.netcore.whatsapp.inbound.NetcoreMessageFormat;
 import com.uci.adapter.netcore.whatsapp.NetcoreWhatsappAdapter;
-import com.uci.adapter.cdn.service.SunbirdCloudMediaService;
 import com.uci.adapter.utils.MediaSizeLimit;
 import com.uci.inbound.utils.XMsgProcessingUtil;
 import com.uci.dao.repository.XMessageRepository;
@@ -21,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBException;
 
 @Slf4j
 @RestController

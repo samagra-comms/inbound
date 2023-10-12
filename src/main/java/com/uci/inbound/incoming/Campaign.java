@@ -13,18 +13,14 @@ import com.uci.utils.CampaignService;
 import com.uci.utils.kafka.SimpleProducer;
 import lombok.extern.slf4j.Slf4j;
 import messagerosa.core.model.*;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 @Slf4j
 @CrossOrigin
