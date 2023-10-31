@@ -145,32 +145,4 @@ public class ServiceStatusController {
 				}
 			});
     }
-
-   	@RequestMapping(value = "/testUserSegment", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment(@RequestParam(name = "limit", required = false) String limit, @RequestParam(name = "offset", required = false) String offset) throws Exception {
-		log.info("Json : "+userSegmentJson1);
-		ObjectMapper mapper = new ObjectMapper();
-		JsonNode result = null;
-		if(userSegmentJson1 == null || userSegmentJson1.isEmpty()){
-			result = mapper.readTree("{\"error\" : \"User Segment JSON Not Found\"}");
-			return  ResponseEntity.ok(result);
-		} else{
-			result = mapper.readTree(userSegmentJson1);
-		}
-		return ResponseEntity.ok(result);
-	}
-
-	@RequestMapping(value = "/testUserSegment2", method = RequestMethod.GET, produces = { "application/json", "text/json" })
-	public ResponseEntity<JsonNode> testUserSegment2(@RequestParam(name = "limit", required = false) String limit, @RequestParam(name = "offset", required = false) String offset) throws Exception {
-		log.info("Json : "+userSegmentJson2);
-		ObjectMapper mapper = new ObjectMapper();
-		JsonNode result = null;
-		if(userSegmentJson2 == null || userSegmentJson2.isEmpty()){
-			result = mapper.readTree("{\"error\" : \"User Segment JSON Not Found\"}");
-			return  ResponseEntity.ok(result);
-		} else{
-			result = mapper.readTree(userSegmentJson2);
-		}
-		return ResponseEntity.ok(result);
-	}
 }
