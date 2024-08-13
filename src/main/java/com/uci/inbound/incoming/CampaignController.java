@@ -55,15 +55,20 @@ public class CampaignController {
     private long cassInsertErrorCount;
 
     @RequestMapping(value = "/start", method = RequestMethod.GET)
-    public ResponseEntity<String> startCampaign(@RequestParam("campaignId") String campaignId, @RequestParam(value = "page", required = false) String page,
-                                                @RequestHeader(value = "Conversation-Authorization", required = false) String conversationAuthorization) {
+    public ResponseEntity<String> startCampaign(
+            @RequestParam("campaignId") String campaignId,
+            @RequestParam("segment") String segment,
+            @RequestParam(value = "page", required = false) String page,
+            @RequestHeader(value = "Conversation-Authorization", required = false) String conversationAuthorization
+    ) {
         final long startTime = System.nanoTime();
         logTimeTaken(startTime, 0, "process-start: %d ms");
-        log.info("Call campaign service : "+campaignId+" page : "+page);
+        log.info("Call campaign service : " + campaignId +" segment: " + segment + " page : " + page);
         Map<String, String> meta;
         if(page != null && !page.isEmpty()){
             meta = new HashMap<>();
             meta.put("page", page);
+            meta.put("segment", segment);
         } else {
             meta = null;
         }
